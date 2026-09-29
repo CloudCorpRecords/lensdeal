@@ -1,0 +1,1 @@
+- [Crusoe model availability](crusoe-model-availability.md) — the live model catalog can disagree with examples in published docs; model ID casing matters.

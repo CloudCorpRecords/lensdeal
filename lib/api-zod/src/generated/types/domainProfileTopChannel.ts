@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
-}
+/**
+ * @nullable
+ */
+export type DomainProfileTopChannel = {
+  label?: string;
+  share?: number;
+} | null;

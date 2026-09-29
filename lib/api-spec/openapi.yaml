@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: screener
+    description: Live acquisition traffic screens
 paths:
   /healthz:
     get:
@@ -24,6 +26,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /screen:
+    post:
+      operationId: createScreen
+      tags: [screener]
+      summary: Compare two domains with a first-pass traffic screen
+      description: Calls Similarweb for recent estimates and Crusoe for an evidence-constrained brief. Each submission consumes provider credits.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScreenInput"
+      responses:
+        "200":
+          description: Completed live screen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScreenReport"
+        "400":
+          description: Invalid domains
+        "502":
+          description: Provider request failed or access is insufficient
 components:
   schemas:
     HealthStatus:
@@ -33,4 +58,82 @@ components:
           type: string
       required:
         - status
+    ScreenInput:
+      type: object
+      additionalProperties: false
+      required: [targetDomain, comparisonDomain]
+      properties:
+        targetDomain: { type: string, minLength: 4, maxLength: 253 }
+        comparisonDomain: { type: string, minLength: 4, maxLength: 253 }
+    TimePoint:
+      type: object
+      required: [month, visits]
+      properties:
+        month: { type: string }
+        visits: { type: number }
+    ShareItem:
+      type: object
+      required: [label, share]
+      properties:
+        label: { type: string }
+        share: { type: number }
+    DomainProfile:
+      type: object
+      required: [domain, monthlyVisits, averageVisits, trafficChangePercent, channels, geography, topCountry, topChannel]
+      properties:
+        domain: { type: string }
+        monthlyVisits:
+          type: array
+          items: { $ref: "#/components/schemas/TimePoint" }
+        averageVisits: { type: number }
+        trafficChangePercent: { type: ["number", "null"] }
+        channels:
+          type: array
+          items: { $ref: "#/components/schemas/ShareItem" }
+        geography:
+          type: array
+          items: { $ref: "#/components/schemas/ShareItem" }
+        topCountry:
+          type: ["object", "null"]
+          properties:
+            label: { type: string }
+            share: { type: number }
+        topChannel:
+          type: ["object", "null"]
+          properties:
+            label: { type: string }
+            share: { type: number }
+    Finding:
+      type: object
+      required: [id, severity, title, metric, value, period, source, sourceUrl, whyItMatters, verificationQuestion]
+      properties:
+        id: { type: string }
+        severity: { type: string, enum: [watch, context] }
+        title: { type: string }
+        metric: { type: string }
+        value: { type: string }
+        period: { type: string }
+        source: { type: string }
+        sourceUrl: { type: string }
+        whyItMatters: { type: string }
+        verificationQuestion: { type: string }
+    ScreenReport:
+      type: object
+      required: [generatedAt, period, sourceNotice, target, comparison, findings, summary, sellerQuestions, limitations]
+      properties:
+        generatedAt: { type: string }
+        period: { type: string }
+        sourceNotice: { type: string }
+        target: { $ref: "#/components/schemas/DomainProfile" }
+        comparison: { $ref: "#/components/schemas/DomainProfile" }
+        findings:
+          type: array
+          items: { $ref: "#/components/schemas/Finding" }
+        summary: { type: string }
+        sellerQuestions:
+          type: array
+          items: { type: string }
+        limitations:
+          type: array
+          items: { type: string }
 

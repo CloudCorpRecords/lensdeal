@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "DealLens"
+description = "A first-pass acquisition traffic screener for buyers: compare two domains using Similarweb estimates and generate a source-linked risk brief and seller verification questions with Crusoe."
+version = "1.0.0"
+id = "artifacts/deal-lens"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23246
+
+[services.development]
+run = "pnpm --filter @workspace/deal-lens run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/deal-lens", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/deal-lens/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23246"
+BASE_PATH = "/"
