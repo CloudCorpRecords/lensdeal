@@ -1,0 +1,29 @@
+kind = "video"
+videoAspectRatio = "9:16"
+previewPath = "/deallens-launch/"
+title = "DealLens — Launch Film"
+description = "A 28-second vertical launch film for DealLens, showing evidence-first acquisition research for brokers and deal teams."
+version = "1.0.0"
+id = "artifacts/deallens-launch"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/deallens-launch/" ]
+localPort = 21630
+
+[services.development]
+run = "pnpm --filter @workspace/deallens-launch run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/deallens-launch", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/deallens-launch/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21630"
+BASE_PATH = "/deallens-launch/"

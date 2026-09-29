@@ -5,3 +5,4 @@
 - [Slide template copy fit](slide-template-copy-fit.md) — sample card labels are too small for real copy; budget text frames before validating a copied deck.
 - [TrustMRR permission scope](trustmrr-permission-scope.md) — customer-facing API use is authorized, but do not infer bulk redistribution or AI-input rights.
 - [Research freshness decisions](research-freshness-decisions.md) — a live model can choose saved-only for an explicit “latest” request; enforce freshness policy outside the model.
+- [Video frame capture](video-frame-capture.md) — Chromium debugging targets include extension pages; select a page target explicitly.

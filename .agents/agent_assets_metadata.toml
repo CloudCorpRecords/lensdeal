@@ -1,0 +1,9 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "9LL8qwKFFGKGUry3uHJAB"
+uri = "file://artifacts/deallens-launch/public/audio/bg_music.mp3"
+type = "audio"
+title = "DealLens launch music"
+description = "Generated music: Refined minimal electronic instrumental for an editorial software launch. Warm plucked synths, soft piano notes, precise dry percussion, round bass, 112 BPM, confident thoughtful moo…"
