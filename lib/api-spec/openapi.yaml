@@ -172,6 +172,42 @@ paths:
       summary: Delete a compilation
       responses:
         "204": { description: Deleted }
+  /compilations/{id}/diligence-brief:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getDiligenceBrief
+      tags: [screener]
+      summary: Read the saved cited diligence brief for my compilation
+      responses:
+        "200":
+          description: Saved brief, or null if none has been generated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DiligenceBriefStatus" }
+        "404": { description: Compilation not found }
+    post:
+      operationId: createDiligenceBrief
+      tags: [screener]
+      summary: Generate a cited diligence brief using one AI question
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DiligenceBriefInput" }
+      responses:
+        "200":
+          description: New or previously saved diligence brief
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DiligenceBrief" }
+        "404": { description: Compilation or source reports not found }
+        "422": { description: Insufficient source evidence }
+        "429": { description: AI allowance exhausted }
+        "502": { description: Provider failed or returned ungrounded content }
   /explanations:
     post:
       operationId: createExplanation
@@ -419,6 +455,55 @@ components:
         screens:
           type: array
           items: { $ref: "#/components/schemas/SavedScreen" }
+    DiligenceBriefInput:
+      type: object
+      additionalProperties: false
+      required: [requestId]
+      properties:
+        requestId: { type: string, minLength: 8, maxLength: 100 }
+    DiligenceCitation:
+      type: object
+      required: [reportId, domain, period, retrievedAt, sourceUrl]
+      properties:
+        reportId: { type: string }
+        domain: { type: string }
+        period: { type: string }
+        retrievedAt: { type: string }
+        sourceUrl: { type: string }
+    DiligenceSignal:
+      type: object
+      required: [text, citationNumbers]
+      properties:
+        text: { type: string }
+        citationNumbers:
+          type: array
+          items: { type: integer }
+    DiligenceBrief:
+      type: object
+      required: [id, compilationId, createdAt, signals, counterSignals, questions, periodNote, limitations, citations]
+      properties:
+        id: { type: string }
+        compilationId: { type: string }
+        createdAt: { type: string }
+        signals:
+          type: array
+          items: { $ref: "#/components/schemas/DiligenceSignal" }
+        counterSignals:
+          type: array
+          items: { $ref: "#/components/schemas/DiligenceSignal" }
+        questions:
+          type: array
+          items: { $ref: "#/components/schemas/DiligenceSignal" }
+        periodNote: { type: string }
+        limitations: { type: string }
+        citations:
+          type: array
+          items: { $ref: "#/components/schemas/DiligenceCitation" }
+    DiligenceBriefStatus:
+      type: object
+      required: [brief]
+      properties:
+        brief: { type: ["object", "null"], $ref: "#/components/schemas/DiligenceBrief" }
     ExplanationInput:
       type: object
       required: [screenId, question, requestId]
