@@ -25,6 +25,7 @@ export * from './findingSeverity';
 export * from './healthStatus';
 export * from './plan';
 export * from './planCatalog';
+export * from './planCatalogBillingStatus';
 export * from './planTier';
 export * from './savedScreen';
 export * from './screenInput';

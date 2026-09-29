@@ -16,3 +16,9 @@ export function approvedBillingOrigin(req: Request): string | null {
     return null;
   }
 }
+
+// DealLens is mounted at the root preview path. Stripe must return to an
+// actual client route; /deal-lens/plans is not a route in this artifact.
+export function billingReturnUrl(origin: string, result?: "success" | "cancelled"): string {
+  return `${origin}/plans${result ? `?billing=${result}` : ""}`;
+}

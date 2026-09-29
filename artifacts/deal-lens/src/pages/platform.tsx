@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
 import { useClerk, useUser } from '@clerk/react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -241,15 +241,29 @@ export function Plans() {
   const checkout = useCreateCheckout(cookieRequest);
   const portal = useCreatePortal(cookieRequest);
   const [error,setError] = useState('');
+  const billingReturn = new URLSearchParams(window.location.search).get('billing');
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (billingReturn !== 'success') return;
+    // Webhooks can arrive after Stripe redirects. Refresh the allowance briefly
+    // rather than implying a successful redirect alone has granted a paid tier.
+    const interval = window.setInterval(() => {
+      void queryClient.invalidateQueries({queryKey:getGetAccountQueryKey()});
+    }, 3000);
+    const timeout = window.setTimeout(() => window.clearInterval(interval), 30000);
+    return () => { window.clearInterval(interval); window.clearTimeout(timeout); };
+  }, [billingReturn, queryClient]);
   async function begin(tier:'pro'|'team'|'enterprise') {setError('');try {const result = await checkout.mutateAsync({data:{tier}});const url = safeUrl(result.url); if (!url) throw new Error('Billing returned an invalid link.'); window.location.assign(url);} catch(cause) {setError(message(cause));}}
   async function manage() {setError('');try {const result = await portal.mutateAsync();const url = safeUrl(result.url);if (!url) throw new Error('Billing returned an invalid link.');window.location.assign(url);} catch(cause) {setError(message(cause));}}
   return <Desk section="Plans & usage">
     <Heading eyebrow="04 / Account" title="Plans & usage." description="Know what your research allowance covers, and when it renews."/>
+    {billingReturn === 'success' && <div className="desk-alert" role="status">Test checkout returned. Your plan and allowance will update after Stripe confirms payment; this may take a moment.</div>}
+    {billingReturn === 'cancelled' && <div className="desk-alert" role="status">Test checkout was cancelled. Your plan was not changed.</div>}
     {error && <div className="desk-alert" role="alert">{error}</div>}
     <section className="desk-panel"><span className="dl-eyebrow">Current allowance</span>
       {account.isLoading ? <Loading/> : account.isError ? <QueryState error={account.error} retry={() => void account.refetch()}/> : account.data && <div className="desk-grid" style={{marginTop:20}}>
         <div><h2>{account.data.tier.toUpperCase()} plan</h2><p>Your usage resets on {dateLabel(account.data.resetsAt)}.</p><div style={{marginTop:30}}><strong>Screen units · {account.data.screensUsed} of {account.data.screenLimit}</strong><div className="desk-meter"><span style={{width:`${Math.min(100,account.data.screenLimit ? account.data.screensUsed/account.data.screenLimit*100 : 0)}%`}}/></div><strong>AI questions · {account.data.aiUsed} of {account.data.aiLimit}</strong><div className="desk-meter"><span style={{width:`${Math.min(100,account.data.aiLimit ? account.data.aiUsed/account.data.aiLimit*100 : 0)}%`}}/></div></div><p className="desk-note">One target and one comparison use one screen unit; Enterprise additional comparison domains use one unit each.</p></div>
-        <div><p>Billing management {account.data.billingEnabled ? 'is available for this account.' : 'is not enabled for this account yet. You can still review your plan and allowance.'}</p><button type="button" className="desk-button secondary" disabled={!account.data.billingEnabled || portal.isPending} onClick={() => void manage()} data-testid="button-manage-billing">{portal.isPending ? 'Opening…' : 'Manage billing'} <ArrowRight size={15}/></button></div>
+        <div><p>{!account.data.billingEnabled ? 'Test billing is not ready. You can still review your plan and allowance.' : account.data.hasBillingCustomer ? 'Manage your Stripe test subscription and payment methods.' : 'Start a test checkout to create a billing profile before using the billing portal.'}</p><button type="button" className="desk-button secondary" disabled={!account.data.billingEnabled || !account.data.hasBillingCustomer || portal.isPending} onClick={() => void manage()} data-testid="button-manage-billing">{portal.isPending ? 'Opening…' : 'Manage test billing'} <ArrowRight size={15}/></button></div>
       </div>}
     </section>
     <section style={{marginTop:60}}><span className="dl-eyebrow">Available plans</span><h2 style={{fontSize:40,fontWeight:500,letterSpacing:'-.05em'}}>Choose your research capacity.</h2>
@@ -259,7 +273,8 @@ export function Plans() {
           <p>{plan.screenLimit} screen units and {plan.aiLimit} AI questions per period.</p>
           {account.data?.tier === plan.tier ? <span style={{marginTop:'auto',fontWeight:700}}>Current plan</span> : plan.tier === 'free' ? <span style={{marginTop:'auto'}}>Included entry plan</span> : <button type="button" className="desk-button" style={{marginTop:'auto'}} disabled={!account.data?.billingEnabled || !plan.checkoutAvailable || checkout.isPending} onClick={() => void begin(plan.tier as 'pro'|'team'|'enterprise')} data-testid={`button-checkout-${plan.tier}`}>{checkout.isPending ? 'Opening TEST checkout…' : !account.data?.billingEnabled ? 'Billing unavailable' : !plan.checkoutAvailable ? 'Checkout unavailable' : 'TEST checkout'} <ArrowRight size={15}/></button>}
         </article>)}</div>
-        <p className="desk-note">Stripe TEST mode only. No live charge will be made.</p><p className="desk-note">{catalog.data?.note}</p>{account.data && !account.data.billingEnabled && <p className="desk-note">Checkout is disabled because billing is not enabled for this account. Your current allowance remains available.</p>}
+        <p className="desk-note" role="status">{catalog.data?.billingStatus.enabled ? 'Stripe sandbox connected: test prices and webhook verified. Test checkout is available in this preview.' : `Stripe sandbox checkout is unavailable. ${catalog.data?.billingStatus.limitation || 'Check the test connection, approved prices, and webhook configuration.'}`}</p>
+        <p className="desk-note">Stripe TEST mode only. No live charge will be made. Replit's Publishing pane separately requires a live Stripe account; connecting the sandbox does not clear that warning or enable live billing.</p><p className="desk-note">{catalog.data?.note}</p>{account.data && !account.data.billingEnabled && <p className="desk-note">Checkout is disabled because test billing is not ready. Your current allowance remains available.</p>}
       </>}
     </section>
   </Desk>;

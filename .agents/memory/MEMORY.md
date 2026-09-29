@@ -1,2 +1,3 @@
 - [Crusoe model availability](crusoe-model-availability.md) — the live model catalog can disagree with examples in published docs; model ID casing matters.
 - [Similarweb external use](similarweb-external-use.md) — public API access is not proof of permission to expose traffic data to paying external users.
+- [Clerk browser verification](clerk-browser-verification.md) — automated development sign-up may stop at a human-verification challenge; don't claim authenticated billing tests passed.

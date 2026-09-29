@@ -12,7 +12,7 @@ import {
   isStripeWebhookReady,
   stripeWebhookStatusNote,
 } from "../lib/billingState";
-import { approvedBillingOrigin } from "../lib/billingRedirect";
+import { approvedBillingOrigin, billingReturnUrl } from "../lib/billingRedirect";
 import { verifyApprovedTestPrice } from "../lib/stripeValidation";
 import { createHash } from "node:crypto";
 
@@ -56,9 +56,10 @@ router.use(requireAuth);
 router.get("/account", async (_req, res) => {
   const owner = accountId(res);
   const { period, tier } = await accountPeriod(owner);
-  const [screensUsed, aiUsed] = await Promise.all([
+  const [screensUsed, aiUsed, accountRows] = await Promise.all([
     usageCount(owner, period.start, "screens"),
     usageCount(owner, period.start, "ai"),
+    db.select({ stripeCustomerId: accounts.stripeCustomerId }).from(accounts).where(eq(accounts.id, owner)).limit(1),
   ]);
   const limits = limitsFor(tier);
   res.json({
@@ -69,6 +70,7 @@ router.get("/account", async (_req, res) => {
     aiLimit: limits.ai,
     resetsAt: period.end.toISOString(),
     billingEnabled: tiers.some(configuredCheckout),
+    hasBillingCustomer: !!accountRows[0]?.stripeCustomerId,
   });
 });
 
@@ -128,8 +130,8 @@ router.post("/billing/checkout", async (req, res): Promise<void> => {
     const sessionForm = new URLSearchParams({
       customer: customerId,
       mode: "subscription",
-      success_url: `${origin}/deal-lens/plans?billing=success`,
-      cancel_url: `${origin}/deal-lens/plans?billing=cancelled`,
+      success_url: billingReturnUrl(origin, "success"),
+      cancel_url: billingReturnUrl(origin, "cancelled"),
       client_reference_id: owner,
       "line_items[0][price]": priceId,
       "line_items[0][quantity]": "1",
@@ -181,7 +183,7 @@ router.post("/billing/portal", async (req, res): Promise<void> => {
     }
     const portalForm = new URLSearchParams({
       customer: account.stripeCustomerId,
-      return_url: `${origin}/deal-lens/plans`,
+      return_url: billingReturnUrl(origin),
     });
     const session = await stripePost("/v1/billing_portal/sessions", portalForm);
     if (session.livemode !== false || typeof session.url !== "string"

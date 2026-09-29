@@ -15,4 +15,5 @@ export interface AccountStatus {
   aiLimit: number;
   resetsAt: string;
   billingEnabled: boolean;
+  hasBillingCustomer: boolean;
 }

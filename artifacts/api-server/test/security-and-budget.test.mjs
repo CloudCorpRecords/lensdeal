@@ -4,7 +4,15 @@ import test from "node:test";
 import { sameOriginSecurity } from "../src/middlewares/sameOriginSecurity.ts";
 import { ProviderError, Semaphore } from "../src/lib/screener.ts";
 import { verifyStripeSignature } from "../src/lib/stripeWebhookSignature.ts";
+import { billingReturnUrl } from "../src/lib/billingRedirect.ts";
 import { comparisonGuide } from "../src/lib/comparisonGuide.ts";
+
+test("test checkout and portal return to the mounted Plans route", () => {
+  const origin = "https://example.replit.dev";
+  assert.equal(billingReturnUrl(origin, "success"), `${origin}/plans?billing=success`);
+  assert.equal(billingReturnUrl(origin, "cancelled"), `${origin}/plans?billing=cancelled`);
+  assert.equal(billingReturnUrl(origin), `${origin}/plans`);
+});
 
 test("comparison guide separates saved peer signals from the later target-only observation", () => {
   const guide = comparisonGuide({

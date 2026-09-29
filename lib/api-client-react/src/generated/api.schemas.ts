@@ -133,6 +133,7 @@ export interface AccountStatus {
   aiLimit: number;
   resetsAt: string;
   billingEnabled: boolean;
+  hasBillingCustomer: boolean;
 }
 
 export interface CompilationInput {
@@ -219,8 +220,17 @@ export interface Plan {
   checkoutAvailable: boolean;
 }
 
+export type PlanCatalogBillingStatus = {
+  enabled: boolean;
+  webhookVerified: boolean;
+  periodicReconciliationVerified: boolean;
+  /** @nullable */
+  limitation: string | null;
+};
+
 export interface PlanCatalog {
   plans: Plan[];
+  billingStatus: PlanCatalogBillingStatus;
   note: string;
 }
 

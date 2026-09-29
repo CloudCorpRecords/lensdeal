@@ -6,8 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Plan } from './plan';
+import type { PlanCatalogBillingStatus } from './planCatalogBillingStatus';
 
 export interface PlanCatalog {
   plans: Plan[];
+  billingStatus: PlanCatalogBillingStatus;
   note: string;
 }
