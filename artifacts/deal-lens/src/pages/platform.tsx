@@ -6,6 +6,7 @@ import { ArrowRight, BookOpen, CreditCard, FolderOpen, LogOut, Plus, Printer, Sc
 import { useForm } from 'react-hook-form';
 import { Form } from '@/components/ui/form';
 import { ScreenReport } from '@/components/screen-report';
+import { ExplanationAnswer } from '@/components/explanation-answer';
 import {
   useGetAccount, useListScreens, useCreateScreen, useGetScreen, useDeleteScreen,
   useListCompilations, useCreateCompilation, useGetCompilation, useDeleteCompilation,
@@ -191,7 +192,7 @@ export function ReportDetail() {
         {account.data && !canAsk && <div className="desk-alert">Your question allowance has been used. It resets {dateLabel(account.data.resetsAt)}. <Link href="/plans">View plans</Link></div>}
         {error && <div className="desk-alert" role="alert">{error}</div>}
         <div style={{marginTop:35}}><span className="dl-eyebrow">Question history</span>
-          {explanations.isLoading ? <Loading/> : explanations.isError ? <QueryState error={explanations.error} retry={() => void explanations.refetch()}/> : !explanations.data?.length ? <Empty title="No questions yet." body="Ask a specific question about the brief to build your research trail."/> : explanations.data.map(item => <article className="explanation" key={item.id}><span className="dl-eyebrow">{timestampLabel(item.createdAt)}</span><h3>{item.question}</h3><p>{item.answer}</p>{item.citations.length > 0 && <div><strong style={{fontSize:12}}>Sources and retrieval times</strong><ul>{item.citations.map((citation,index) => <li key={index}>{safeUrl(citation.url) ? <a href={safeUrl(citation.url)!} target="_blank" rel="noopener noreferrer" data-testid={`link-citation-${item.id}-${index}`}>{citation.label}</a> : citation.label} · {citation.period} · Retrieved {timestampLabel(citation.retrievedAt)}</li>)}</ul></div>}</article>)}
+          {explanations.isLoading ? <Loading/> : explanations.isError ? <QueryState error={explanations.error} retry={() => void explanations.refetch()}/> : !explanations.data?.length ? <Empty title="No questions yet." body="Ask a specific question about the brief to build your research trail."/> : explanations.data.map(item => <article className="explanation" key={item.id}><span className="dl-eyebrow">{timestampLabel(item.createdAt)}</span><h3>{item.question}</h3><ExplanationAnswer answer={item.answer} id={item.id} citations={item.citations}/>{item.citations.length > 0 && <div><strong style={{fontSize:12}}>Sources and retrieval times</strong><ul>{item.citations.map((citation,index) => <li id={`citation-${item.id}-${index}`} key={index}><span className="source-number">[{index + 1}]</span> {safeUrl(citation.url) ? <a href={safeUrl(citation.url)!} target="_blank" rel="noopener noreferrer" data-testid={`link-citation-${item.id}-${index}`}>{citation.label}</a> : citation.label} · {citation.period} · Retrieved {timestampLabel(citation.retrievedAt)}</li>)}</ul></div>}</article>)}
         </div>
       </section>
     </>}

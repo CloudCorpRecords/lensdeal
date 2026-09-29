@@ -5,7 +5,7 @@ import { CreateExplanationBody } from "@workspace/api-zod";
 import { db, explanations, requestIdempotency, savedScreens } from "@workspace/db";
 import { accountId, requireAuth } from "../middlewares/requireAuth";
 import { generateExplanation, type Citation } from "../lib/explanations";
-import { fetchFreshTrafficEstimate, ProviderError } from "../lib/screener";
+import { CHANNEL_DOC, fetchFreshTrafficEstimate, GEO_DOC, ProviderError, TRAFFIC_DOC } from "../lib/screener";
 import {
   fingerprintRequest,
   makeCachedResponse,
@@ -20,7 +20,15 @@ router.use(requireAuth);
 function citationsFrom(reportValue: Record<string, unknown>): Citation[] {
   const findings = Array.isArray(reportValue.findings) ? reportValue.findings as Array<Record<string, unknown>> : [];
   const generatedAt = typeof reportValue.generatedAt === "string" ? reportValue.generatedAt : new Date().toISOString();
+  const period = typeof reportValue.period === "string" ? reportValue.period : "Saved report period";
   const citations = new Map<string, Citation>();
+  // Values are in the saved report above the answer. These links explain the
+  // provider's metric definitions; they are not links to public data snapshots.
+  for (const [url, label] of [
+    [TRAFFIC_DOC, "Saved report · Similarweb estimated visits and trend"],
+    [CHANNEL_DOC, "Saved report · Similarweb traffic channel estimates"],
+    [GEO_DOC, "Saved report · Similarweb geographic estimates"],
+  ]) citations.set(`${url}|${period}`, { label, url, period, retrievedAt: generatedAt });
   for (const finding of findings) {
     const url = finding.sourceUrl;
     if (typeof url !== "string") continue;
@@ -31,8 +39,8 @@ function citationsFrom(reportValue: Record<string, unknown>): Citation[] {
       continue;
     }
     const label = typeof finding.source === "string" ? finding.source : "Saved screen source";
-    const period = typeof finding.period === "string" ? finding.period : String(reportValue.period || "Saved report period");
-    citations.set(`${label}|${url}|${period}`, { label, url, period, retrievedAt: generatedAt });
+    const findingPeriod = typeof finding.period === "string" ? finding.period : period;
+    citations.set(`${label}|${url}|${findingPeriod}`, { label, url, period: findingPeriod, retrievedAt: generatedAt });
   }
   return [...citations.values()].slice(0, 12);
 }

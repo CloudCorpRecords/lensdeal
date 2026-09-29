@@ -428,7 +428,7 @@
 .desk-meter { height:6px; background:#d9e0cf; margin:15px 0; overflow:hidden; }.desk-meter span { display:block; height:100%; background:#819b65; }
 .desk-check { display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid #dce2d5; cursor:pointer; }
 .desk-check input { accent-color:#546d3a; width:17px; height:17px; }
-.explanation { padding:25px 0; border-bottom:1px solid #d1dacb; }.explanation h3 { font-size:17px; font-weight:600; margin:0 0 12px; }.explanation p { white-space:pre-wrap; line-height:1.7; color:#4f6054; }.explanation a { color:#446c55; }
+.explanation { padding:25px 0; border-bottom:1px solid #d1dacb; }.explanation h3 { font-size:17px; font-weight:600; margin:0 0 12px; }.explanation p { line-height:1.7; color:#4f6054; }.explanation a { color:#446c55; }.explanation-answer { margin:16px 0 22px; }.explanation-answer p { margin:0 0 14px; }.explanation-answer h4 { margin:22px 0 10px; font-size:13px; color:#223b31; }.explanation-answer strong { color:#263e33; font-weight:700; }.explanation-point { display:flex; align-items:start; gap:10px; margin:0 0 8px; }.explanation-point > span { color:#759b35; line-height:1.7; }.explanation-point p { margin:0; }.explanation .source-number { font-weight:700; color:#516d55; }
 .auth-page { min-height:100dvh; background:#1c2c27; color:#e9efde; display:grid; grid-template-columns:1fr 1fr; }
 .auth-story { padding:55px clamp(35px,6vw,110px); display:flex; flex-direction:column; justify-content:space-between; background:radial-gradient(circle at 70% 45%,#435d46,#1c2c27 70%); }
 .auth-story h1 { font-size:clamp(50px,6vw,94px); line-height:1; letter-spacing:-.065em; font-weight:500; }

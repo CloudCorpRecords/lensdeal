@@ -4,6 +4,35 @@ import test from "node:test";
 import { sameOriginSecurity } from "../src/middlewares/sameOriginSecurity.ts";
 import { ProviderError, Semaphore } from "../src/lib/screener.ts";
 import { verifyStripeSignature } from "../src/lib/stripeWebhookSignature.ts";
+import { comparisonGuide } from "../src/lib/comparisonGuide.ts";
+
+test("comparison guide separates saved peer signals from the later target-only observation", () => {
+  const guide = comparisonGuide({
+    period: "2026-05 to 2026-07",
+    target: { domain: "nike.com", averageVisits: 119419420, trafficChangePercent: 9.38 },
+    comparison: { domain: "adidas.com", averageVisits: 42062799, trafficChangePercent: 38.81 },
+  }, {
+    domain: "nike.com", metric: "Estimated monthly visits", visits: 124488692,
+    period: "2026-08", source: "Fresh Similarweb traffic-and-engagement estimate",
+    sourceUrl: "https://example.com/method", retrievedAt: "2026-09-29T00:00:00Z",
+  });
+  assert.equal(guide.reachComparison?.higherReachDomain, "nike.com");
+  assert.equal(guide.reachComparison?.multiple, 2.8);
+  assert.equal(guide.momentumComparison?.fasterGrowthDomain, "adidas.com");
+  assert.equal(guide.momentumComparison?.gapPercentagePoints, 29.4);
+  assert.equal(guide.freshTargetOnly.domain, "nike.com");
+  assert.match(guide.freshTargetOnly.note, /do not compare.*peer/i);
+  const noRatio = comparisonGuide({
+    target: { domain: "zero.example", averageVisits: 0, trafficChangePercent: null },
+    comparison: { domain: "peer.example", averageVisits: 10, trafficChangePercent: 1 },
+  }, {
+    domain: "zero.example", metric: "Estimated monthly visits", visits: 1,
+    period: "2026-08", source: "Fresh Similarweb traffic-and-engagement estimate",
+    sourceUrl: "https://example.com/method", retrievedAt: "2026-09-29T00:00:00Z",
+  });
+  assert.equal(noRatio.reachComparison, null);
+  assert.equal(noRatio.momentumComparison, null);
+});
 
 function response() {
   return {

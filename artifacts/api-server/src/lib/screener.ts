@@ -25,9 +25,9 @@ export type Finding = {
 };
 
 const API = "https://api.similarweb.com/v5/website-analysis/websites";
-const TRAFFIC_DOC = "https://docs.similarweb.com/api-v5/api-reference/website-analysis-api/website-performance/traffic-and-engagement";
-const CHANNEL_DOC = "https://docs.similarweb.com/api-v5/api-reference/website-analysis-api/marketing-channels/marketing-channels-new";
-const GEO_DOC = "https://docs.similarweb.com/api-v5/api-reference/website-analysis-api/website-performance/traffic-geography";
+export const TRAFFIC_DOC = "https://docs.similarweb.com/api-v5/api-reference/website-analysis-api/website-performance/traffic-and-engagement";
+export const CHANNEL_DOC = "https://docs.similarweb.com/api-v5/api-reference/website-analysis-api/marketing-channels/marketing-channels-new";
+export const GEO_DOC = "https://docs.similarweb.com/api-v5/api-reference/website-analysis-api/website-performance/traffic-geography";
 const domainPattern = /^(?=.{4,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i;
 
 export class ProviderError extends Error {
