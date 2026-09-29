@@ -291,7 +291,7 @@ components:
         verificationQuestion: { type: string }
     ScreenReport:
       type: object
-      required: [generatedAt, period, sourceNotice, target, comparison, findings, summary, sellerQuestions, limitations]
+      required: [generatedAt, period, sourceNotice, target, findings, summary, sellerQuestions, limitations]
       properties:
         generatedAt: { type: string }
         id: { type: string }

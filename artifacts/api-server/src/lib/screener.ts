@@ -237,7 +237,7 @@ export async function fetchProfile(domain: string, start: string, end: string): 
 
 const percent = (value: number) => `${(value * 100).toFixed(1)}%`;
 
-export function findingsFor(target: DomainProfile, comparison: DomainProfile, period: string): Finding[] {
+export function findingsFor(target: DomainProfile, comparison: DomainProfile | undefined, period: string): Finding[] {
   const results: Finding[] = [];
   const add = (f: Omit<Finding, "id" | "source">) => results.push({
     id: `F${results.length + 1}`,
@@ -268,7 +268,7 @@ export function findingsFor(target: DomainProfile, comparison: DomainProfile, pe
       verificationQuestion: `Can the seller share customers and revenue by country alongside GA4 traffic by country, especially ${target.topCountry.label}?`,
     });
   }
-  if (comparison.averageVisits > 0) {
+  if (comparison && comparison.averageVisits > 0) {
     add({
       severity: "context", title: "Peer traffic benchmark", metric: "Average estimated monthly visits",
       value: `${Math.round(target.averageVisits).toLocaleString()} vs ${Math.round(comparison.averageVisits).toLocaleString()}`,
@@ -289,14 +289,14 @@ export function findingsFor(target: DomainProfile, comparison: DomainProfile, pe
   return results;
 }
 
-export async function generateBrief(target: DomainProfile, comparison: DomainProfile, findings: Finding[]): Promise<string> {
+export async function generateBrief(target: DomainProfile, comparison: DomainProfile | undefined, findings: Finding[]): Promise<string> {
   const key = process.env.CRUSOE_API_KEY;
   if (!key) throw new ProviderError("Crusoe", "API key is not configured.");
   const facts = {
     target: target.domain,
-    peer: comparison.domain,
+    ...(comparison ? { peer: comparison.domain } : {}),
     targetAverageMonthlyVisits: Math.round(target.averageVisits),
-    peerAverageMonthlyVisits: Math.round(comparison.averageVisits),
+    ...(comparison ? { peerAverageMonthlyVisits: Math.round(comparison.averageVisits) } : {}),
     flags: findings.map(({ title, metric, value, period, whyItMatters }) => ({ title, metric, value, period, whyItMatters })),
   };
   let response: Response;
@@ -310,7 +310,7 @@ export async function generateBrief(target: DomainProfile, comparison: DomainPro
         temperature: 0.1,
         max_tokens: 220,
         messages: [
-          { role: "system", content: "You are a cautious acquisition research analyst. Write a 2-3 sentence first-pass screening brief using ONLY the supplied facts. Do not infer revenue, fraud, intent, causation, or investment advice. These traffic values are external estimates, not first-party evidence. Do not invent any numbers. Recommend verification with seller analytics. Return plain text only." },
+          { role: "system", content: "You are a cautious acquisition research analyst. Write a 2-3 sentence first-pass screening brief using ONLY the supplied facts. A peer is optional: if no peer is provided, describe only the target and do not imply a comparison. Do not infer revenue, fraud, intent, causation, or investment advice. These traffic values are external estimates, not first-party evidence. Do not invent any numbers. Recommend verification with seller analytics. Return plain text only." },
           { role: "user", content: JSON.stringify(facts) },
         ],
       }),

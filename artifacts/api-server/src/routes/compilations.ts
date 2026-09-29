@@ -25,7 +25,7 @@ function summarizeScreens(screens: Array<typeof savedScreens.$inferSelect>): str
       findings?: Array<{ title?: string; value?: string; source?: string; sourceUrl?: string; period?: string }>;
     };
     return [
-      `${screen.targetDomain} compared with ${screen.comparisonDomains.join(", ")}: ${report.summary || "No summary saved."}`,
+      `${screen.targetDomain}${screen.comparisonDomains.length ? ` compared with ${screen.comparisonDomains.join(", ")}` : " (target-only research)"}: ${report.summary || "No summary saved."}`,
       ...(report.findings || []).slice(0, 8).map((finding) =>
         `${finding.title || "Finding"} — ${finding.value || "No value"}; ${finding.source || "source not specified"}; ${finding.period || "period not specified"}; ${finding.sourceUrl || "source URL unavailable"}`,
       ),

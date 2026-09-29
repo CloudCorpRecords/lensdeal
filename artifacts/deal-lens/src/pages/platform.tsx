@@ -12,7 +12,7 @@ import {
   useListCompilations, useCreateCompilation, useGetCompilation, useDeleteCompilation,
   useCreateExplanation, useListExplanations, useListPlans, useCreateCheckout, useCreatePortal,
   getGetAccountQueryKey, getListScreensQueryKey, getListCompilationsQueryKey, getListExplanationsQueryKey,
-  getGetScreenQueryKey, getGetCompilationQueryKey,
+  getGetScreenQueryKey, getGetCompilationQueryKey, getGetAccountQueryOptions,
 } from '@workspace/api-client-react';
 import type { ScreenInput, SavedScreen } from '@workspace/api-client-react';
 
@@ -20,6 +20,15 @@ const dateLabel = (value: string) => { const date = new Date(value); return Numb
 const timestampLabel = (value: string) => { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-US', {dateStyle:'medium',timeStyle:'short'}).format(date); };
 const normalize = (value: string) => { try { return new URL(value.trim().includes('://') ? value.trim() : `https://${value.trim()}`).hostname.toLowerCase().replace(/^www\./,'').replace(/\.$/,''); } catch { return value.trim().toLowerCase(); } };
 const validDomain = (domain: string) => /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(domain) && domain.length <= 253;
+const parseDomain = (value: string) => {
+  const raw = value.trim();
+  if (!/^(?:https?:\/\/)?(?:www\.)?[a-z0-9.-]+\/?$/i.test(raw)) return null;
+  const domain = normalize(raw);
+  return validDomain(domain) ? domain : null;
+};
+const screenScope = (screen: SavedScreen) => screen.comparisonDomains?.length
+  ? `Compared with ${screen.comparisonDomains.join(', ')}`
+  : 'Target-only screen';
 const message = (error: unknown) => {
   if (error && typeof error === 'object' && 'data' in error) {
     const data = error.data;
@@ -32,6 +41,7 @@ const safeUrl = (value: string) => { try { const url = new URL(value); return ['
 // The generated client calls root-relative /api paths. Under any Vite BASE_PATH,
 // those stay on this origin (the shared API mount) and carry the Clerk session cookie.
 const cookieRequest = {request:{credentials:'include' as const}};
+type BatchWork = {inputs:ScreenInput[];nextIndex:number;links:{id:string;label:string}[];retryIndex?:number};
 
 export function Desk({ children, section }: { children: React.ReactNode; section: string }) {
   const [location] = useLocation();
@@ -50,13 +60,14 @@ function Loading() { return <div aria-label="Loading"><div className="desk-skele
 function Empty({ title,body,link,linkText }: {title:string;body:string;link?:string;linkText?:string}) { return <div className="desk-empty"><span className="dl-eyebrow">Nothing here yet</span><h3>{title}</h3><p>{body}</p>{link && <Link className="desk-button" href={link} data-testid="link-empty-action">{linkText} <ArrowRight size={15}/></Link>}</div>; }
 function ScreenSignals({screen}: {screen:SavedScreen}) {
   const {report} = screen;
+  const comparison = report.comparison;
   return <div className="screen-signals" data-testid={`signals-screen-${screen.id}`}>
-    <span>{report.period} · Estimated visits: {new Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:1}).format(report.target.averageVisits)} target / {new Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:1}).format(report.comparison.averageVisits)} peer</span>
+    <span>{report.period} · Estimated visits: {new Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:1}).format(report.target.averageVisits)} target{comparison ? ` / ${new Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:1}).format(comparison.averageVisits)} peer` : ''}</span>
     {report.findings.length > 0 && <span>{report.findings.length} findings · {report.findings.slice(0,2).map(finding => finding.title).join(' · ')}</span>}
     {report.summary && <span className="screen-signal-summary">{report.summary}</span>}
   </div>;
 }
-function SavedRows({screens}: {screens:SavedScreen[]}) { return <div className="desk-list">{screens.map(screen => <div className="desk-row" key={screen.id}><div><strong>{screen.targetDomain}</strong><small>Compared with {screen.comparisonDomains.join(', ')} · {dateLabel(screen.createdAt)}</small><ScreenSignals screen={screen}/></div><div className="desk-row-actions"><Link href={`/history/${encodeURIComponent(screen.id)}`} data-testid={`link-open-screen-${screen.id}`}>Open brief <ArrowRight size={13} style={{display:'inline'}}/></Link></div></div>)}</div>; }
+function SavedRows({screens}: {screens:SavedScreen[]}) { return <div className="desk-list">{screens.map(screen => <div className="desk-row" key={screen.id}><div><strong>{screen.targetDomain}</strong><small>{screenScope(screen)} · {dateLabel(screen.createdAt)}</small><ScreenSignals screen={screen}/></div><div className="desk-row-actions"><Link href={`/history/${encodeURIComponent(screen.id)}`} data-testid={`link-open-screen-${screen.id}`}>Open brief <ArrowRight size={13} style={{display:'inline'}}/></Link></div></div>)}</div>; }
 
 export function Workspace() {
   const account = useGetAccount(cookieRequest);
@@ -65,30 +76,45 @@ export function Workspace() {
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   const form = useForm<{targetDomain:string;comparisonDomain:string}>({defaultValues:{targetDomain:'',comparisonDomain:''}});
+  const [mode,setMode] = useState<'solo'|'compare'>('solo');
   const [extras,setExtras] = useState<string[]>([]);
   const [error,setError] = useState('');
-  const [batch,setBatch] = useState<{inputs:ScreenInput[];nextIndex:number;links:{id:string;label:string}[]} | null>(null);
+  const [batch,setBatch] = useState<BatchWork | null>(null);
   const [running,setRunning] = useState(false);
   const [report,setReport] = useState<Awaited<ReturnType<typeof create.mutateAsync>> | null>(null);
   const enterprise = account.data?.tier === 'enterprise';
   const remaining = account.data ? Math.max(0,account.data.screenLimit-account.data.screensUsed) : null;
-  const requiredUnits = enterprise ? extras.length + 1 : 1;
-  async function runBatch(work:{inputs:ScreenInput[];nextIndex:number;links:{id:string;label:string}[]}) {
-    const pendingUnits = work.inputs.slice(work.nextIndex).reduce((sum,input) => sum+(input.comparisonDomains?.length ?? 1),0);
-    if (remaining !== null && remaining < pendingUnits) { setError(`Not enough screen units to complete the remaining comparisons. You need ${pendingUnits}, with ${remaining} available. Allowance resets ${account.data ? dateLabel(account.data.resetsAt) : 'at your next reset'}.`); return; }
+  const peerCount = mode === 'compare' ? 1 + (enterprise ? extras.length : 0) : 0;
+  const domainCount = 1 + peerCount;
+  const requiredUnits = Math.max(1,peerCount);
+  const pendingBatch = batch !== null && batch.nextIndex < batch.inputs.length;
+  async function runBatch(work:BatchWork) {
+    if (running) return;
     setError(''); setRunning(true);
     let links = [...work.links];
     for (let index=work.nextIndex; index<work.inputs.length; index++) {
       setBatch({...work,nextIndex:index,links});
       try {
+        // Refetch here, rather than reusing the account captured before earlier batch parts.
+        const freshAccount = await queryClient.fetchQuery({...getGetAccountQueryOptions(cookieRequest), staleTime:0});
+        const available = Math.max(0,freshAccount.screenLimit-freshAccount.screensUsed);
+        const units = Math.max(1,work.inputs[index].comparisonDomains?.length ?? 0);
+        // An uncertain network failure may have completed server-side; replay that
+        // same request ID even when its charged units now exhaust the allowance.
+        if (available < units && work.retryIndex !== index) {
+          setError(`Brief ${index+1} needs ${units} screen ${units === 1 ? 'unit' : 'units'}, with ${available} available. Allowance resets ${dateLabel(freshAccount.resetsAt)}. Completed reports remain saved.`);
+          setRunning(false);
+          return;
+        }
         const result = await create.mutateAsync({data:work.inputs[index]});
         setReport(result);
-        if (result.id) links = [...links,{id:result.id,label:`Report ${index+1}: ${work.inputs[index].comparisonDomains?.join(', ')}`}];
-        setBatch({...work,nextIndex:index+1,links});
-        await Promise.all([queryClient.invalidateQueries({queryKey:getListScreensQueryKey()}),queryClient.invalidateQueries({queryKey:getGetAccountQueryKey()})]);
+        if (result.id && !links.some(link => link.id === result.id)) links = [...links,{id:result.id,label:work.inputs[index].comparisonDomains?.length ? `Brief ${index+1}: ${work.inputs[index].comparisonDomains?.join(', ')}` : `Brief ${index+1}: target only`}];
+        setBatch({...work,nextIndex:index+1,links,retryIndex:undefined});
+        void queryClient.invalidateQueries({queryKey:getListScreensQueryKey()});
+        void queryClient.invalidateQueries({queryKey:getGetAccountQueryKey()});
       } catch (cause) {
         setError(`Part ${index+1} of ${work.inputs.length} could not be completed: ${message(cause)}. Completed reports remain saved; retry resumes at this part with the same request ID.`);
-        setBatch({...work,nextIndex:index,links});
+        setBatch({...work,nextIndex:index,links,retryIndex:index});
         setRunning(false);
         return;
       }
@@ -97,43 +123,55 @@ export function Workspace() {
     if (work.inputs.length === 1 && links[0]) navigate(`/history/${encodeURIComponent(links[0].id)}`);
   }
   function submit(values:{targetDomain:string;comparisonDomain:string}) {
-    const domains = [values.targetDomain,values.comparisonDomain,...(enterprise ? extras : [])].map(normalize);
-    if (domains.some(domain => !validDomain(domain))) { setError('Enter valid domains, such as example.com, for every field.'); return; }
+    if (running || pendingBatch) { setError('Finish or resume the current research set before starting a new one.'); return; }
+    const raw = [values.targetDomain,...(mode === 'compare' ? [values.comparisonDomain,...(enterprise ? extras : [])] : [])];
+    const domains = raw.map(parseDomain);
+    if (domains.some(domain => !domain)) { setError('Complete every visible field with a valid domain such as example.com (no paths or ports).'); return; }
     if (new Set(domains).size !== domains.length) { setError('Each domain must be different.'); return; }
-    if (remaining !== null && remaining < requiredUnits) { setError(`This comparison needs ${requiredUnits} screen ${requiredUnits === 1 ? 'unit' : 'units'}, but you have ${remaining} remaining. Your allowance resets ${account.data ? dateLabel(account.data.resetsAt) : 'at your next reset'}.`); return; }
-    const comparisons = domains.slice(1);
+    if (domains.length > (enterprise ? 20 : 2)) { setError(enterprise ? 'A research set can contain no more than 20 domains.' : 'Your plan supports one target and one peer per screen.'); return; }
+    if (remaining !== null && remaining < requiredUnits) { setError(`This screen needs ${requiredUnits} screen ${requiredUnits === 1 ? 'unit' : 'units'}, but you have ${remaining} remaining. Your allowance resets ${account.data ? dateLabel(account.data.resetsAt) : 'at your next reset'}.`); return; }
+    const target = domains[0]!;
+    const comparisons = domains.slice(1) as string[];
     const inputs:ScreenInput[] = [];
-    for (let index=0;index<comparisons.length;index+=8) inputs.push({targetDomain:domains[0],comparisonDomains:comparisons.slice(index,index+8),requestId:crypto.randomUUID()});
+    if (!comparisons.length) inputs.push({targetDomain:target,comparisonDomains:[],requestId:crypto.randomUUID()});
+    else for (let index=0;index<comparisons.length;index+=8) inputs.push({targetDomain:target,comparisonDomains:comparisons.slice(index,index+8),requestId:crypto.randomUUID()});
     const next = {inputs,nextIndex:0,links:[]};
     setReport(null); setBatch(next); void runBatch(next);
   }
   return <Desk section="Workspace">
-    <Heading eyebrow="01 / New research" title="The screening desk." description="Start with a target and a meaningful comparison. Use the resulting brief to ask the seller for context, not to draw a final conclusion."/>
+    <Heading eyebrow="01 / New research" title="The screening desk." description="Study one business on its own, or put its traffic beside relevant peers. Directional evidence for seller conversations, never an investment recommendation."/>
     <div className="desk-grid">
       <section className="desk-panel">
         <span className="dl-eyebrow">New traffic screen</span><h2 style={{marginTop:14}}>What are you looking at?</h2>
-        <Form {...form}><form onSubmit={form.handleSubmit(submit)} noValidate>
-          <div className="desk-fields">
-            <label className="desk-field">Target domain<input {...form.register('targetDomain')} placeholder="targetbusiness.com" aria-label="Target domain" data-testid="input-target-domain"/></label>
-            <label className="desk-field">Comparison domain<input {...form.register('comparisonDomain')} placeholder="relevantpeer.com" aria-label="Comparison domain" data-testid="input-comparison-domain"/></label>
-          </div>
-          {enterprise && <div><p className="desk-note">Add as many peers as your remaining screen units support. Each additional domain uses one more unit; larger sets are processed as separate saved briefs of up to eight comparisons each.</p>
-            {extras.map((value,index) => <div className="desk-field" key={index} style={{marginBottom:12}}><label htmlFor={`extra-${index}`}>Additional comparison {index+1}</label><div style={{display:'flex',gap:8}}><input id={`extra-${index}`} value={value} onChange={event => setExtras(current => current.map((item,i) => i === index ? event.target.value : item))} placeholder="anotherpeer.com" data-testid={`input-extra-${index}`}/><button type="button" className="desk-button secondary" aria-label={`Remove comparison ${index+1}`} onClick={() => setExtras(current => current.filter((_,i) => i !== index))} data-testid={`button-remove-extra-${index}`}><X size={16}/></button></div></div>)}
-            <button type="button" className="desk-button secondary" onClick={() => setExtras(current => [...current,''])} data-testid="button-add-domain"><Plus size={15}/> Add another domain</button>
-          </div>}
+         <Form {...form}><form onSubmit={form.handleSubmit(submit)} noValidate>
+           <div className="desk-mode-switch" role="radiogroup" aria-label="Research mode">
+             <label className={`desk-mode ${mode === 'solo' ? 'selected' : ''}`}><input type="radio" name="screen-mode" value="solo" checked={mode === 'solo'} onChange={() => setMode('solo')} disabled={running} data-testid="radio-mode-solo"/><span><strong>Target only</strong><small>One business, in focus</small></span><span className="desk-mode-unit">01 unit</span></label>
+             <label className={`desk-mode ${mode === 'compare' ? 'selected' : ''}`}><input type="radio" name="screen-mode" value="compare" checked={mode === 'compare'} onChange={() => setMode('compare')} disabled={running} data-testid="radio-mode-compare"/><span><strong>Compare peers</strong><small>Put estimates in context</small></span><span className="desk-mode-unit">From 01 unit</span></label>
+           </div>
+           <div className="desk-fields">
+             <label className="desk-field">Target domain<input {...form.register('targetDomain')} placeholder="targetbusiness.com" autoComplete="off" spellCheck={false} aria-label="Target domain" data-testid="input-target-domain"/></label>
+             {mode === 'compare' && <label className="desk-field">Peer domain 01<input {...form.register('comparisonDomain')} placeholder="relevantpeer.com" autoComplete="off" spellCheck={false} aria-label="Comparison domain" data-testid="input-comparison-domain"/></label>}
+           </div>
+           {mode === 'compare' && enterprise && <div><p className="desk-note">Add up to 19 peers in total. Each peer beyond the first adds one screen unit. Sets larger than eight peers are saved as separate briefs, ready to compile.</p>
+             <div className="desk-extra-fields">{extras.map((value,index) => <div className="desk-field" key={index}><label htmlFor={`extra-${index}`}>Peer domain {String(index+2).padStart(2,'0')}</label><div className="desk-removable"><input id={`extra-${index}`} value={value} onChange={event => setExtras(current => current.map((item,i) => i === index ? event.target.value : item))} placeholder="anotherpeer.com" autoComplete="off" spellCheck={false} data-testid={`input-extra-${index}`}/><button type="button" className="desk-button secondary" aria-label={`Remove peer ${index+2}`} onClick={() => setExtras(current => current.filter((_,i) => i !== index))} disabled={running} data-testid={`button-remove-extra-${index}`}><X size={16}/></button></div></div>)}</div>
+             <button type="button" className="desk-button secondary" onClick={() => setExtras(current => current.length < 18 ? [...current,''] : current)} disabled={running || extras.length >= 18} data-testid="button-add-domain"><Plus size={15}/> Add peer</button>
+             {extras.length >= 18 && <p className="desk-note">Maximum reached: 20 domains including the target.</p>}
+           </div>}
+           {mode === 'compare' && !enterprise && <p className="desk-note">Your plan includes one peer per screen. Enterprise supports up to 19 peers alongside a target.</p>}
+           <div className="desk-estimate" aria-live="polite" data-testid="status-screen-estimate"><strong>{String(domainCount).padStart(2,'0')} / {enterprise ? '20' : '02'} domains</strong><span>{requiredUnits} screen {requiredUnits === 1 ? 'unit' : 'units'} estimated · {remaining === null ? 'Checking allowance' : `${remaining} remaining`}</span></div>
           <div style={{display:'flex',alignItems:'center',gap:16,marginTop:25,flexWrap:'wrap'}}>
-            <button className="desk-button" disabled={running || account.isLoading || account.isError || (remaining !== null && remaining < requiredUnits)} type="submit" data-testid="button-run-screen">{running ? 'Building your briefs…' : 'Run traffic screen'} <ArrowRight size={16}/></button>
-            <span className="desk-note">{requiredUnits} screen {requiredUnits === 1 ? 'unit' : 'units'} needed · {remaining === null ? 'checking allowance' : `${remaining} remaining`}. Each comparison uses one unit.</span>
+             <button className="desk-button" disabled={running || pendingBatch || account.isLoading || account.isError || (remaining !== null && remaining < requiredUnits)} type="submit" data-testid="button-run-screen">{running ? 'Building your briefs…' : pendingBatch ? 'Resume the current set below' : 'Run traffic screen'} <ArrowRight size={16}/></button>
+             <span className="desk-note">Target-only and target + one peer each use one unit. Further Enterprise peers use one unit each.</span>
           </div>
         </form></Form>
         {remaining !== null && remaining < requiredUnits && <div className="desk-alert" role="status" data-testid="status-insufficient-units">Not enough screen units for these domains: {requiredUnits} needed, {remaining} remaining. Resets {account.data ? dateLabel(account.data.resetsAt) : 'on your next reset'}. <Link href="/plans">View plans</Link></div>}
         {error && <div className="desk-alert" role="alert">{error}</div>}
         {batch && <div className="desk-panel" style={{marginTop:25,marginBottom:0}} aria-live="polite" data-testid="status-screen-batch">
           <strong>{running ? `Processing brief ${batch.nextIndex+1} of ${batch.inputs.length}` : batch.nextIndex === batch.inputs.length ? 'Research set complete' : `Paused at brief ${batch.nextIndex+1} of ${batch.inputs.length}`}</strong>
-          <p className="desk-note">{batch.nextIndex} of {batch.inputs.length} briefs completed. Each completed brief is saved separately.</p>
+           <p className="desk-note">{batch.nextIndex} of {batch.inputs.length} briefs completed. Each completed brief is saved separately. Retrying keeps the same request ID for the unfinished brief.</p>
           {running && <Loading/>}
           {batch.links.length > 0 && <div className="desk-list">{batch.links.map(link => <div className="desk-row" key={link.id}><span>{link.label}</span><Link href={`/history/${encodeURIComponent(link.id)}`} className="desk-button secondary" data-testid={`link-batch-report-${link.id}`}>Open report <ArrowRight size={14}/></Link></div>)}</div>}
-          {!running && batch.nextIndex < batch.inputs.length && error && <button type="button" className="desk-button" onClick={() => void runBatch(batch)} disabled={remaining !== null && remaining < batch.inputs.slice(batch.nextIndex).reduce((sum,input)=>sum+(input.comparisonDomains?.length ?? 1),0)} data-testid="button-retry-screen">Resume remaining briefs</button>}
+           {!running && batch.nextIndex < batch.inputs.length && error && <button type="button" className="desk-button" onClick={() => void runBatch(batch)} data-testid="button-retry-screen">Resume remaining briefs</button>}
           {batch.links.length > 0 && <Link href="/history" className="desk-button secondary" data-testid="link-batch-history">Browse all saved reports <ArrowRight size={14}/></Link>}
           {batch.nextIndex === batch.inputs.length && batch.links.length > 1 && <Link href={`/compilations?screenIds=${encodeURIComponent(batch.links.map(link=>link.id).join(','))}`} className="desk-button secondary" data-testid="link-compile-batch">Create a compilation from these reports <ArrowRight size={14}/></Link>}
         </div>}
@@ -141,7 +179,7 @@ export function Workspace() {
       <aside className="desk-panel"><span className="dl-eyebrow">Your capacity</span>{account.isLoading ? <Loading/> : account.isError ? <QueryState error={account.error} retry={() => void account.refetch()}/> : account.data && <><h2 style={{marginTop:20}}>{account.data.tier.toUpperCase()} plan</h2><p>Screens used <strong>{account.data.screensUsed} / {account.data.screenLimit}</strong></p><div className="desk-meter"><span style={{width:`${Math.min(100,account.data.screenLimit ? account.data.screensUsed/account.data.screenLimit*100 : 0)}%`}}/></div><p>AI questions used <strong>{account.data.aiUsed} / {account.data.aiLimit}</strong></p><div className="desk-meter"><span style={{width:`${Math.min(100,account.data.aiLimit ? account.data.aiUsed/account.data.aiLimit*100 : 0)}%`}}/></div><p className="desk-note">Allowance resets {dateLabel(account.data.resetsAt)}.</p>{remaining === 0 && <p className="desk-alert">You've used your current screen allowance. Check plans or return after your reset.</p>}<Link href="/plans" className="desk-button secondary" data-testid="link-view-plan">View plan <ArrowRight size={14}/></Link></>}</aside>
     </div>
     {report && <div style={{marginTop:45}}><ScreenReport report={report}/></div>}
-    <section style={{marginTop:70}}><div className="desk-heading"><div><span className="dl-eyebrow">Continued work</span><h1 style={{fontSize:44}}>Recent briefs</h1></div><Link href="/history" className="desk-button secondary" data-testid="link-all-history">View all reports <ArrowRight size={15}/></Link></div>{screens.isLoading ? <Loading/> : screens.isError ? <QueryState error={screens.error} retry={() => void screens.refetch()}/> : screens.data?.length ? <SavedRows screens={screens.data.slice(0,4)}/> : <Empty title="The desk is clear." body="Your completed screens will appear here once you run your first comparison."/>}</section>
+    <section style={{marginTop:70}}><div className="desk-heading"><div><span className="dl-eyebrow">Continued work</span><h1 style={{fontSize:44}}>Recent briefs</h1></div><Link href="/history" className="desk-button secondary" data-testid="link-all-history">View all reports <ArrowRight size={15}/></Link></div>{screens.isLoading ? <Loading/> : screens.isError ? <QueryState error={screens.error} retry={() => void screens.refetch()}/> : screens.data?.length ? <SavedRows screens={screens.data.slice(0,4)}/> : <Empty title="The desk is clear." body="Your completed screens will appear here once you run your first target-only or comparison screen."/>}</section>
   </Desk>;
 }
 
@@ -158,7 +196,7 @@ export function History() {
     {error && <div className="desk-alert">{error}</div>}
     {screens.isLoading ? <Loading/> : screens.isError ? <QueryState error={screens.error} retry={() => void screens.refetch()}/> : !screens.data?.length ? <Empty title="No reports saved yet." body="Run a screen to build your first brief." link="/workspace" linkText="Start a screen"/> :
       <div className="desk-panel"><span className="dl-eyebrow">{screens.data.length} saved briefs</span><div className="desk-list" style={{marginTop:18}}>{screens.data.map(screen => <div className="desk-row" key={screen.id}>
-        <div><strong>{screen.targetDomain}</strong><small>Compared with {screen.comparisonDomains.join(', ')} · {dateLabel(screen.createdAt)}</small><ScreenSignals screen={screen}/></div>
+         <div><strong>{screen.targetDomain}</strong><small>{screenScope(screen)} · {dateLabel(screen.createdAt)}</small><ScreenSignals screen={screen}/></div>
         <div className="desk-row-actions"><Link href={`/history/${encodeURIComponent(screen.id)}`} data-testid={`link-open-screen-${screen.id}`}>Open brief</Link><button type="button" disabled={remove.isPending} onClick={() => void deleteOne(screen)} data-testid={`button-delete-screen-${screen.id}`} aria-label={`Delete ${screen.targetDomain}`}><Trash2 size={15}/></button></div>
       </div>)}</div></div>}
   </Desk>;
@@ -180,7 +218,7 @@ export function ReportDetail() {
   }
   const canAsk = account.data && account.data.aiUsed < account.data.aiLimit;
   return <Desk section="Report">
-    <Heading eyebrow="Saved brief / Review" title={screen.data?.targetDomain || 'Opening brief'} description={screen.data ? `Compared with ${screen.data.comparisonDomains.join(', ')} · Saved ${dateLabel(screen.data.createdAt)}` : 'Review the evidence, then decide what to ask next.'} action={<button type="button" className="desk-button secondary" onClick={() => window.print()} disabled={!screen.data} data-testid="button-print-report"><Printer size={16}/> Print / save PDF</button>}/>
+     <Heading eyebrow="Saved brief / Review" title={screen.data?.targetDomain || 'Opening brief'} description={screen.data ? `${screenScope(screen.data)} · Saved ${dateLabel(screen.data.createdAt)}` : 'Review the evidence, then decide what to ask next.'} action={<button type="button" className="desk-button secondary" onClick={() => window.print()} disabled={!screen.data} data-testid="button-print-report"><Printer size={16}/> Print / save PDF</button>}/>
     {screen.isLoading ? <Loading/> : screen.isError ? <QueryState error={screen.error} retry={() => void screen.refetch()}/> : screen.data && <>
       <ScreenReport report={screen.data.report}/>
       <section className="desk-panel" style={{marginTop:40}}>
@@ -218,7 +256,7 @@ export function Compilations() {
     if (!window.confirm(`Delete compilation "${title}"? Its individual reports will remain saved.`)) return;
     try {await remove.mutateAsync({id}); await queryClient.invalidateQueries({queryKey:getListCompilationsQueryKey()});} catch(cause) {setError(message(cause));}
   }
-  return <Desk section="Compilations"><Heading eyebrow="03 / Cross-report research" title="Compilations." description="Bring saved briefs together to see the bigger picture across the businesses you're studying."/><div className="desk-grid"><section className="desk-panel"><span className="dl-eyebrow">Create a compilation</span><h2 style={{marginTop:15}}>Build a research set.</h2><Form {...form}><form onSubmit={form.handleSubmit(submit)}><label className="desk-field" style={{margin:'22px 0'}}>Title<input {...form.register('title',{required:true})} placeholder="A name for this research set" maxLength={120} data-testid="input-compilation-title"/></label><span className="dl-eyebrow">Select saved reports</span>{screens.isLoading ? <Loading/> : screens.isError ? <QueryState error={screens.error} retry={() => void screens.refetch()}/> : screens.data?.length ? screens.data.map(screen => <label className="desk-check" key={screen.id}><input type="checkbox" checked={selected.includes(screen.id)} onChange={event => setSelected(current => event.target.checked ? [...current,screen.id] : current.filter(id => id !== screen.id))} data-testid={`checkbox-screen-${screen.id}`}/><span>{screen.targetDomain} <small style={{display:'block',color:'#839082'}}>vs {screen.comparisonDomains.join(', ')}</small></span></label>) : <p>No saved reports yet. <Link href="/workspace">Run a screen</Link> to start a compilation.</p>}<button type="submit" className="desk-button" style={{marginTop:22}} disabled={create.isPending || !screens.data?.length} data-testid="button-create-compilation">{create.isPending ? 'Compiling…' : 'Create compilation'} <ArrowRight size={16}/></button></form></Form>{error && <div className="desk-alert" role="alert">{error}</div>}</section><aside className="desk-panel"><span className="dl-eyebrow">Research note</span><h2 style={{marginTop:18}}>Keep the threads together.</h2><p>A compilation summarizes selected saved reports. Every source brief remains available to inspect independently, including its limitations and seller questions.</p></aside></div><section style={{marginTop:65}}><span className="dl-eyebrow">Saved sets</span><h2 style={{fontSize:38,fontWeight:500,letterSpacing:'-.05em'}}>Your compilations</h2>{compilations.isLoading ? <Loading/> : compilations.isError ? <QueryState error={compilations.error} retry={() => void compilations.refetch()}/> : !compilations.data?.length ? <Empty title="No sets assembled yet." body="Select one or more saved reports above to create a compilation."/> : <div className="desk-list">{compilations.data.map(item => <div className="desk-row" key={item.id}><div><strong>{item.title}</strong><small>{item.screenIds.length} reports · {dateLabel(item.createdAt)}</small></div><div className="desk-row-actions"><Link href={`/compilations/${encodeURIComponent(item.id)}`} data-testid={`link-compilation-${item.id}`}>Open compilation</Link><button type="button" onClick={() => void deleteOne(item.id,item.title)} disabled={remove.isPending} aria-label={`Delete ${item.title}`} data-testid={`button-delete-compilation-${item.id}`}><Trash2 size={15}/></button></div></div>)}</div>}</section></Desk>;
+   return <Desk section="Compilations"><Heading eyebrow="03 / Cross-report research" title="Compilations." description="Bring saved briefs together to see the bigger picture across the businesses you're studying."/><div className="desk-grid"><section className="desk-panel"><span className="dl-eyebrow">Create a compilation</span><h2 style={{marginTop:15}}>Build a research set.</h2><Form {...form}><form onSubmit={form.handleSubmit(submit)}><label className="desk-field" style={{margin:'22px 0'}}>Title<input {...form.register('title',{required:true})} placeholder="A name for this research set" maxLength={120} data-testid="input-compilation-title"/></label><span className="dl-eyebrow">Select saved reports</span>{screens.isLoading ? <Loading/> : screens.isError ? <QueryState error={screens.error} retry={() => void screens.refetch()}/> : screens.data?.length ? screens.data.map(screen => <label className="desk-check" key={screen.id}><input type="checkbox" checked={selected.includes(screen.id)} onChange={event => setSelected(current => event.target.checked ? [...current,screen.id] : current.filter(id => id !== screen.id))} data-testid={`checkbox-screen-${screen.id}`}/><span>{screen.targetDomain} <small style={{display:'block',color:'#839082'}}>{screen.comparisonDomains?.length ? `vs ${screen.comparisonDomains.join(', ')}` : 'Target only'}</small></span></label>) : <p>No saved reports yet. <Link href="/workspace">Run a screen</Link> to start a compilation.</p>}<button type="submit" className="desk-button" style={{marginTop:22}} disabled={create.isPending || !screens.data?.length} data-testid="button-create-compilation">{create.isPending ? 'Compiling…' : 'Create compilation'} <ArrowRight size={16}/></button></form></Form>{error && <div className="desk-alert" role="alert">{error}</div>}</section><aside className="desk-panel"><span className="dl-eyebrow">Research note</span><h2 style={{marginTop:18}}>Keep the threads together.</h2><p>A compilation summarizes selected saved reports. Every source brief remains available to inspect independently, including its limitations and seller questions.</p></aside></div><section style={{marginTop:65}}><span className="dl-eyebrow">Saved sets</span><h2 style={{fontSize:38,fontWeight:500,letterSpacing:'-.05em'}}>Your compilations</h2>{compilations.isLoading ? <Loading/> : compilations.isError ? <QueryState error={compilations.error} retry={() => void compilations.refetch()}/> : !compilations.data?.length ? <Empty title="No sets assembled yet." body="Select one or more saved reports above to create a compilation."/> : <div className="desk-list">{compilations.data.map(item => <div className="desk-row" key={item.id}><div><strong>{item.title}</strong><small>{item.screenIds.length} reports · {dateLabel(item.createdAt)}</small></div><div className="desk-row-actions"><Link href={`/compilations/${encodeURIComponent(item.id)}`} data-testid={`link-compilation-${item.id}`}>Open compilation</Link><button type="button" onClick={() => void deleteOne(item.id,item.title)} disabled={remove.isPending} aria-label={`Delete ${item.title}`} data-testid={`button-delete-compilation-${item.id}`}><Trash2 size={15}/></button></div></div>)}</div>}</section></Desk>;
 }
 
 export function CompilationDetailPage() {
@@ -264,7 +302,7 @@ export function Plans() {
     {error && <div className="desk-alert" role="alert">{error}</div>}
     <section className="desk-panel"><span className="dl-eyebrow">Current allowance</span>
       {account.isLoading ? <Loading/> : account.isError ? <QueryState error={account.error} retry={() => void account.refetch()}/> : account.data && <div className="desk-grid" style={{marginTop:20}}>
-        <div><h2>{account.data.tier.toUpperCase()} plan</h2><p>Your usage resets on {dateLabel(account.data.resetsAt)}.</p><div style={{marginTop:30}}><strong>Screen units · {account.data.screensUsed} of {account.data.screenLimit}</strong><div className="desk-meter"><span style={{width:`${Math.min(100,account.data.screenLimit ? account.data.screensUsed/account.data.screenLimit*100 : 0)}%`}}/></div><strong>AI questions · {account.data.aiUsed} of {account.data.aiLimit}</strong><div className="desk-meter"><span style={{width:`${Math.min(100,account.data.aiLimit ? account.data.aiUsed/account.data.aiLimit*100 : 0)}%`}}/></div></div><p className="desk-note">One target and one comparison use one screen unit; Enterprise additional comparison domains use one unit each.</p></div>
+        <div><h2>{account.data.tier.toUpperCase()} plan</h2><p>Your usage resets on {dateLabel(account.data.resetsAt)}.</p><div style={{marginTop:30}}><strong>Screen units · {account.data.screensUsed} of {account.data.screenLimit}</strong><div className="desk-meter"><span style={{width:`${Math.min(100,account.data.screenLimit ? account.data.screensUsed/account.data.screenLimit*100 : 0)}%`}}/></div><strong>AI questions · {account.data.aiUsed} of {account.data.aiLimit}</strong><div className="desk-meter"><span style={{width:`${Math.min(100,account.data.aiLimit ? account.data.aiUsed/account.data.aiLimit*100 : 0)}%`}}/></div></div><p className="desk-note">A target-only screen or a target with one peer uses one screen unit. On Enterprise, each additional peer uses one more unit (up to 19 peers).</p></div>
          <div><p>{!account.data.billingEnabled ? 'Billing is not ready in this environment. You can still review your allowance.' : account.data.hasBillingCustomer ? `Manage your Stripe ${modeLabel} subscription and payment methods.` : `Start a ${modeLabel} checkout to create a billing profile before using the billing portal.`}</p><button type="button" className="desk-button secondary" disabled={!account.data.billingEnabled || !account.data.hasBillingCustomer || portal.isPending} onClick={() => void manage()} data-testid="button-manage-billing">{portal.isPending ? 'Opening…' : `Manage ${modeLabel} billing`} <ArrowRight size={15}/></button></div>
       </div>}
     </section>

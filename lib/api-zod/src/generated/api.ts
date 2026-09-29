@@ -96,7 +96,7 @@ export const CreateScreenResponse = zod.object({
   "label": zod.string().optional(),
   "share": zod.number().optional()
 }).nullable()
-}),
+}).optional(),
   "additionalProfiles": zod.array(zod.object({
   "domain": zod.string(),
   "monthlyVisits": zod.array(zod.object({
@@ -218,7 +218,7 @@ export const ListScreensResponseItem = zod.object({
   "label": zod.string().optional(),
   "share": zod.number().optional()
 }).nullable()
-}),
+}).optional(),
   "additionalProfiles": zod.array(zod.object({
   "domain": zod.string(),
   "monthlyVisits": zod.array(zod.object({
@@ -330,7 +330,7 @@ export const GetScreenResponse = zod.object({
   "label": zod.string().optional(),
   "share": zod.number().optional()
 }).nullable()
-}),
+}).optional(),
   "additionalProfiles": zod.array(zod.object({
   "domain": zod.string(),
   "monthlyVisits": zod.array(zod.object({
@@ -493,7 +493,7 @@ export const GetCompilationResponse = zod.object({
   "label": zod.string().optional(),
   "share": zod.number().optional()
 }).nullable()
-}),
+}).optional(),
   "additionalProfiles": zod.array(zod.object({
   "domain": zod.string(),
   "monthlyVisits": zod.array(zod.object({

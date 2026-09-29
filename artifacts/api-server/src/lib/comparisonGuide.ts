@@ -45,7 +45,9 @@ export function comparisonGuide(report: Record<string, unknown>, fresh: FreshTra
       domain: fresh.domain,
       month: fresh.period,
       estimatedVisits: fresh.visits,
-      note: "One separate, newer modeled estimate for the target only; do not compare it with the peer's old period as if concurrent.",
+      note: peer
+        ? "One separate, newer modeled estimate for the target only; do not compare it with the peer's old period as if concurrent."
+        : "One separate, newer modeled estimate for the target; compare periods cautiously, not as concurrent measurements.",
     },
   };
 }

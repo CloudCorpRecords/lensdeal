@@ -99,7 +99,7 @@ export interface ScreenReport {
   period: string;
   sourceNotice: string;
   target: DomainProfile;
-  comparison: DomainProfile;
+  comparison?: DomainProfile;
   additionalProfiles?: DomainProfile[];
   findings: Finding[];
   summary: string;

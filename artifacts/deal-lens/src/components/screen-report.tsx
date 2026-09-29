@@ -112,12 +112,14 @@ function FindingCard({ finding, index }: { finding: Finding; index: number }) {
 
 export function ScreenReport({ report }: { report: ScreenReportType }) {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const comparison = report.comparison;
+  const peers = [comparison, ...(report.additionalProfiles ?? [])].filter((profile): profile is DomainProfile => Boolean(profile));
   const date = new Date(report.generatedAt);
   const generatedLabel = Number.isNaN(date.getTime()) ? report.generatedAt : new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
   return (
     <div data-testid="report-screen">
       <div className="report-head">
-        <div><span className="eyebrow" style={{ color: '#d66240' }}>Analysis complete · {report.period}</span><h2>Screening brief</h2></div>
+        <div><span className="eyebrow" style={{ color: '#d66240' }}>Analysis complete · {report.period}</span><h2>{peers.length ? 'Comparison brief' : 'Target-only brief'}</h2></div>
         <span className="report-date" data-testid="text-generated-at">Generated {generatedLabel}</span>
       </div>
       <div className="report-tabs" role="tablist" aria-label="Report sections">
@@ -127,13 +129,13 @@ export function ScreenReport({ report }: { report: ScreenReportType }) {
       <section id="panel-overview" role="tabpanel" aria-label="Overview" className="report-section" style={{ display: activeTab === 'overview' ? 'block' : 'none' }}>
         <div className="overview-grid">
           <div className="panel panel-pad">
-            <div className="panel-heading"><h3>At a glance</h3><small>Comparable traffic estimates</small></div>
-            <table className="comparison-table"><thead><tr><th>Metric</th><th>Target · {report.target.domain}</th><th>Comparison · {report.comparison.domain}</th></tr></thead>
+            <div className="panel-heading"><h3>At a glance</h3><small>{peers.length ? `Directional estimates · ${peers.length} ${peers.length === 1 ? 'peer' : 'peers'}` : 'Directional target estimates'}</small></div>
+            <table className={`comparison-table ${!comparison ? 'solo-table' : ''}`}><thead><tr><th>Metric</th><th>Target · {report.target.domain}</th>{comparison && <th>Comparison · {comparison.domain}</th>}</tr></thead>
               <tbody>
-                <tr><td>Avg. monthly visits</td><td data-testid="value-target-average">{numberFormat.format(report.target.averageVisits)}</td><td data-testid="value-comparison-average">{numberFormat.format(report.comparison.averageVisits)}</td></tr>
-                <tr><td>Traffic change</td><td><Change value={report.target.trafficChangePercent} /></td><td><Change value={report.comparison.trafficChangePercent} /></td></tr>
-                <tr><td>Leading channel</td><td>{report.target.topChannel ? `${report.target.topChannel.label ?? '—'} · ${report.target.topChannel.share == null ? '—' : formatShare(report.target.topChannel.share)}` : 'Not available'}</td><td>{report.comparison.topChannel ? `${report.comparison.topChannel.label ?? '—'} · ${report.comparison.topChannel.share == null ? '—' : formatShare(report.comparison.topChannel.share)}` : 'Not available'}</td></tr>
-                <tr><td>Leading country</td><td>{report.target.topCountry ? `${report.target.topCountry.label ?? '—'} · ${report.target.topCountry.share == null ? '—' : formatShare(report.target.topCountry.share)}` : 'Not available'}</td><td>{report.comparison.topCountry ? `${report.comparison.topCountry.label ?? '—'} · ${report.comparison.topCountry.share == null ? '—' : formatShare(report.comparison.topCountry.share)}` : 'Not available'}</td></tr>
+                <tr><td>Avg. monthly visits</td><td data-testid="value-target-average">{numberFormat.format(report.target.averageVisits)}</td>{comparison && <td data-testid="value-comparison-average">{numberFormat.format(comparison.averageVisits)}</td>}</tr>
+                <tr><td>Traffic change</td><td><Change value={report.target.trafficChangePercent} /></td>{comparison && <td><Change value={comparison.trafficChangePercent} /></td>}</tr>
+                <tr><td>Leading channel</td><td>{report.target.topChannel ? `${report.target.topChannel.label ?? '—'} · ${report.target.topChannel.share == null ? '—' : formatShare(report.target.topChannel.share)}` : 'Not available'}</td>{comparison && <td>{comparison.topChannel ? `${comparison.topChannel.label ?? '—'} · ${comparison.topChannel.share == null ? '—' : formatShare(comparison.topChannel.share)}` : 'Not available'}</td>}</tr>
+                <tr><td>Leading country</td><td>{report.target.topCountry ? `${report.target.topCountry.label ?? '—'} · ${report.target.topCountry.share == null ? '—' : formatShare(report.target.topCountry.share)}` : 'Not available'}</td>{comparison && <td>{comparison.topCountry ? `${comparison.topCountry.label ?? '—'} · ${comparison.topCountry.share == null ? '—' : formatShare(comparison.topCountry.share)}` : 'Not available'}</td>}</tr>
               </tbody>
             </table>
           </div>
@@ -144,13 +146,13 @@ export function ScreenReport({ report }: { report: ScreenReportType }) {
 
       <section id="panel-profiles" role="tabpanel" aria-label="Traffic profiles" className="report-section" style={{ display: activeTab === 'profiles' ? 'block' : 'none' }}>
         <div className="section-title"><h3>Traffic profiles</h3><small>Reported period · {report.period}</small></div>
-        <div className="profile-grid"><Profile profile={report.target} label="01 / TARGET DOMAIN" /><Profile profile={report.comparison} label="02 / COMPARISON DOMAIN" compare />{report.additionalProfiles?.map((profile, index) => <Profile key={`${profile.domain}-${index}`} profile={profile} label={`${String(index + 3).padStart(2, '0')} / ADDITIONAL COMPARISON`} compare />)}</div>
+        <div className={`profile-grid ${peers.length ? '' : 'solo-profiles'}`}><Profile profile={report.target} label="01 / TARGET DOMAIN" />{peers.map((profile, index) => <Profile key={`${profile.domain}-${index}`} profile={profile} label={`${String(index + 2).padStart(2, '0')} / ${index === 0 ? 'COMPARISON DOMAIN' : 'ADDITIONAL COMPARISON'}`} compare />)}</div>
         <p className="source-notice"><Info size={15} />{report.sourceNotice}</p>
       </section>
 
       <section id="panel-findings" role="tabpanel" aria-label="Findings" className="report-section" style={{ display: activeTab === 'findings' ? 'block' : 'none' }}>
         <div className="section-title"><h3>Evidence-backed findings</h3><small>{report.findings.length} observations</small></div>
-        {report.findings.length ? <div className="finding-list">{report.findings.map((finding, index) => <FindingCard key={finding.id} finding={finding} index={index} />)}</div> : <div className="panel panel-pad" style={{ color: '#73817c', fontSize: 13 }}>No specific findings were returned for this comparison. Review the profiles and request source data from the seller.</div>}
+        {report.findings.length ? <div className="finding-list">{report.findings.map((finding, index) => <FindingCard key={finding.id} finding={finding} index={index} />)}</div> : <div className="panel panel-pad" style={{ color: '#73817c', fontSize: 13 }}>No specific findings were returned for this screen. Review the profiles and request source data from the seller.</div>}
       </section>
 
       <section id="panel-questions" role="tabpanel" aria-label="Seller questions" className="report-section" style={{ display: activeTab === 'questions' ? 'block' : 'none' }}>

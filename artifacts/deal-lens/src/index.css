@@ -402,6 +402,23 @@
 .desk-panel p { color:#6d7a6d; line-height:1.55; }
 .desk-grid { display:grid; grid-template-columns:1.4fr .8fr; gap:25px; }
 .desk-fields { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; margin:24px 0; }
+.desk-mode-switch { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:26px; }
+.desk-mode { display:flex; align-items:center; gap:11px; min-width:0; padding:17px 15px; background:#f0f2e8; border:1px solid #ced8c9; cursor:pointer; transition:background .2s,border-color .2s; }
+.desk-mode.selected { background:#e4edcf; border-color:#668a48; }
+.desk-mode:focus-within { outline:2px solid #668a48; outline-offset:2px; }
+.desk-mode input { accent-color:#4e7540; flex:none; width:17px; height:17px; }
+.desk-mode span:not(.desk-mode-unit) { min-width:0; display:grid; gap:3px; }
+.desk-mode strong { font-size:13px; color:#263a2d; }
+.desk-mode small { font-size:11px; color:#637568; }
+.desk-mode-unit { margin-left:auto; white-space:nowrap; font:10px var(--app-font-mono); color:#647c58; }
+.desk-extra-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 18px; margin:19px 0; }
+.desk-removable { display:flex; gap:7px; min-width:0; }
+.desk-removable input { min-width:0; }
+.desk-removable .desk-button { padding:0 13px; flex:none; }
+.desk-estimate { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; border-top:1px solid #d9dfd0; border-bottom:1px solid #d9dfd0; padding:14px 0; margin-top:22px; color:#435d48; font:11px var(--app-font-mono); }
+.desk-estimate strong { font-size:13px; color:#304b36; }
+.solo-profiles { grid-template-columns:minmax(0,1fr); max-width:670px; }
+.solo-table td:first-child { width:45%; }
 .desk-field { display:grid; gap:8px; font:11px var(--app-font-mono); text-transform:uppercase; letter-spacing:.05em; color:#637268; }
 .desk-field input,.desk-field textarea,.desk-input { border:1px solid #bbc7b8; background:#f9faf3; color:#25362e; padding:14px 15px; width:100%; outline:none; border-radius:2px; font:14px var(--app-font-sans); letter-spacing:0; text-transform:none; }
 .desk-field input:focus,.desk-field textarea:focus,.desk-input:focus { border-color:#526f43; box-shadow:inset 0 0 0 1px #526f43; }
@@ -438,4 +455,6 @@
 .cl-formButtonPrimary { background:#3d5b38!important; }
 @media(max-width:1000px) { .desk-side { width:210px; } .dl-pricing-grid { grid-template-columns:repeat(2,1fr); } }
 @media(max-width:767px) { .dl-container { width:calc(100% - 40px); }.dl-nav-links { gap:12px; }.dl-nav-links a:not(.dl-link-button) { display:none; }.dl-hero { min-height:680px; }.dl-hero-inner { padding:100px 0; }.dl-hero h1 { font-size:clamp(62px,15vw,95px); }.dl-hero-bottom { display:block; }.dl-hero-bottom .dl-cta { margin-top:25px; }.dl-orbit { opacity:.4; right:-340px; }.dl-section { padding:80px 0; }.dl-section-head,.dl-step,.dl-quote,.dl-evidence { grid-template-columns:1fr; gap:20px; }.dl-section-head { margin-bottom:40px; }.dl-step { padding:28px 0; }.dl-step strong { font-size:23px; }.dl-dark-section { padding:80px 0; }.dl-pricing-grid { grid-template-columns:1fr; }.dl-price { min-height:260px; }.dl-footer-row { display:block; }.dl-footer nav { margin-top:30px; }.desk { display:block; }.desk-side { position:relative; height:auto; min-height:0; width:100%; padding:17px 20px; }.desk-side .dl-logo { margin:0 0 16px; }.desk-side nav { display:flex; gap:3px; overflow-x:auto; }.desk-side nav a { flex-shrink:0; font-size:12px; padding:9px; }.desk-side-bottom { display:flex; align-items:center; justify-content:space-between; padding:7px 10px 0; border:0; margin-top:5px; }.desk-side-bottom p,.desk-nav-label { display:none; }.desk-side-bottom button { flex-shrink:0; }.desk-body { padding:40px 20px 70px; }.desk-grid,.desk-fields { grid-template-columns:1fr; }.desk-heading { align-items:start; flex-direction:column; }.desk-row { align-items:start; flex-direction:column; }.auth-page { grid-template-columns:1fr; }.auth-story { min-height:280px; padding:30px; }.auth-story h1 { font-size:48px; }.auth-form { padding:42px 20px; } }
+@media(max-width:767px) { .desk-extra-fields { grid-template-columns:1fr; } }
+@media(max-width:480px) { .desk-mode-switch { grid-template-columns:1fr; }.desk-panel { padding:21px; }.desk-mode { padding:14px; } }
 @media print { .desk-side,.desk-top,.desk-heading .desk-button,.desk-row-actions,.desk-panel form { display:none!important; }.desk-body { padding:0; }.desk-main { width:100%; } }

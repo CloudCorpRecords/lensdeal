@@ -19,6 +19,7 @@ import {
   reserveUsage,
   refundReservation,
 } from "../lib/usage";
+import { screenAccessError, screenUnits } from "../lib/screenPolicy";
 
 const router: IRouter = Router();
 const domainPattern = /^(?=.{4,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i;
@@ -51,7 +52,7 @@ router.use(requireAuth);
 router.post("/screen", async (req, res): Promise<void> => {
   const parsed = CreateScreenBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "Enter a valid target domain and one or more comparison domains." });
+    res.status(400).json({ error: "Enter a valid target domain and optional comparison domains." });
     return;
   }
   if (!parsed.data.requestId) {
@@ -70,14 +71,14 @@ router.post("/screen", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Enter valid domain names or website URLs." });
     return;
   }
-  if (!domainPattern.test(targetDomain) || comparisonDomains.length === 0
+  if (!domainPattern.test(targetDomain) || comparisonDomains.length > 19
     || comparisonDomains.some((domain) => !domainPattern.test(domain) || domain === targetDomain)) {
-    res.status(400).json({ error: "Enter distinct, valid target and comparison domains." });
+    res.status(400).json({ error: "Enter distinct, valid domains (up to 20 total)." });
     return;
   }
 
   const owner = accountId(res);
-  const units = comparisonDomains.length;
+  const units = screenUnits(comparisonDomains.length);
   const requestId = parsed.data.requestId;
   const fingerprint = fingerprintRequest({ targetDomain, comparisonDomains });
   const reservation = await reserveUsage(owner, "screens", units, requestId, fingerprint);
@@ -98,7 +99,8 @@ router.post("/screen", async (req, res): Promise<void> => {
       comparison?: { domain?: string };
       additionalProfiles?: Array<{ domain?: string }>;
     };
-    const cachedDomains = [cached.comparison?.domain, ...(cached.additionalProfiles || []).map((profile) => profile.domain)];
+    const cachedDomains = [cached.comparison?.domain, ...(cached.additionalProfiles || []).map((profile) => profile.domain)]
+      .filter((domain): domain is string => typeof domain === "string");
     if (cached.target?.domain !== targetDomain || cachedDomains.length !== comparisonDomains.length
       || cachedDomains.some((domain, index) => domain !== comparisonDomains[index])) {
       res.status(409).json({ error: "This requestId was already used for different screen input." });
@@ -110,17 +112,11 @@ router.post("/screen", async (req, res): Promise<void> => {
   let persisted = false;
   try {
     const serverComparisonCap = Math.max(1, Math.min(30, Number(process.env.DEALLENS_MAX_COMPARISONS_PER_SCREEN) || 8));
-    if (comparisonDomains.length > serverComparisonCap) {
-      await refundReservation(owner, "screens", units, reservation.periodStart, requestId, reservation.reservationId);
-      res.status(413).json({
-        error: `This request exceeds the server-side provider spend cap of ${serverComparisonCap} comparisons. Split it into smaller screens.`,
-      });
-      return;
-    }
     const entitlement = await accountPeriod(owner);
-    if (comparisonDomains.length > 1 && entitlement.tier !== "enterprise") {
+    const accessError = screenAccessError(comparisonDomains.length, entitlement.tier, serverComparisonCap);
+    if (accessError) {
       await refundReservation(owner, "screens", units, reservation.periodStart, requestId, reservation.reservationId);
-      res.status(403).json({ error: "Multi-domain comparisons require an active Enterprise subscription." });
+      res.status(accessError.status).json({ error: accessError.error });
       return;
     }
     const period = screenPeriod();
@@ -128,12 +124,14 @@ router.post("/screen", async (req, res): Promise<void> => {
       fetchProfile(domain, period.start, period.end));
     const target = await fetchProfile(targetDomain, period.start, period.end);
     const comparison = profiles[0];
-    const findings = profiles.flatMap((profile, profileIndex) =>
-      findingsFor(target, profile, period.label).map((finding, findingIndex) => ({
-        ...finding,
-        id: `F${profileIndex + 1}.${findingIndex + 1}`,
-      })),
-    );
+    const findings = profiles.length
+      ? profiles.flatMap((profile, profileIndex) =>
+          findingsFor(target, profile, period.label).map((finding, findingIndex) => ({
+            ...finding,
+            id: `F${profileIndex + 1}.${findingIndex + 1}`,
+          })),
+        )
+      : findingsFor(target, undefined, period.label);
     const summary = await generateBrief(target, comparison, findingsFor(target, comparison, period.label));
     const id = randomUUID();
     const report = CreateScreenResponse.parse({
@@ -142,7 +140,7 @@ router.post("/screen", async (req, res): Promise<void> => {
       period: period.label,
       sourceNotice: "Live Similarweb estimates analyzed with Crusoe. Not seller-provided analytics.",
       target,
-      comparison,
+      ...(comparison ? { comparison } : {}),
       ...(profiles.length > 1 ? { additionalProfiles: profiles.slice(1) } : {}),
       findings,
       summary,
