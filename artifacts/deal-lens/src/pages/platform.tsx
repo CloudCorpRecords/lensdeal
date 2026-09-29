@@ -94,7 +94,7 @@ export function Workspace() {
   const peerAvailable = !peerEntry.trim() || (enterprise && (extras.some(value => !value.trim()) || extras.length < 18));
   function chooseDiscoveryTarget(domain:string) {
     if (running || pendingBatch) return {ok:false,message:'Finish the current research set before changing domains.'};
-    if (domain === parseDomain(peerEntry) || extras.some(value => parseDomain(value) === domain)) return {ok:false,message:'This domain is already in a peer field. Each domain in a screen must be different.'};
+    if (mode === 'compare' && (domain === parseDomain(peerEntry) || (enterprise && extras.some(value => parseDomain(value) === domain)))) return {ok:false,message:'This domain is already in a peer field. Each domain in a screen must be different.'};
     form.setValue('targetDomain',domain,{shouldDirty:true,shouldTouch:true});
     setError('');
     return {ok:true,message:`${domain} is now in the editable target field. Review it above before running a screen.`};

@@ -44,6 +44,11 @@ test("browse requests only ten items and projects provider records without reven
 });
 
 test("provider rate limits and malformed responses fail explicitly", async () => {
+  const empty = await browseTrustMrr(
+    { page: 4, sort: "listed-desc" }, "test-token",
+    async () => new Response(JSON.stringify({ data: [], meta: { hasMore: false } }), { status: 200 }),
+  );
+  assert.deepEqual(empty, { data: [], page: 4, hasMore: false });
   await assert.rejects(
     browseTrustMrr({ page: 3, sort: "revenue-desc" }, "test-token", async () => new Response(JSON.stringify({ data: [], meta: {} }), { status: 200 })),
     (error) => error instanceof DiscoveryError && error.status === 503,

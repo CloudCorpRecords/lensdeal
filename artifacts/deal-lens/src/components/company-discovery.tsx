@@ -32,6 +32,14 @@ const listingHref = (value: string) => {
     return url.protocol === 'https:' && (url.hostname === 'trustmrr.com' || url.hostname.endsWith('.trustmrr.com')) ? url.href : null;
   } catch { return null; }
 };
+const websiteHref = (value: string | null, domain: string | null) => {
+  if (!value || !domain) return null;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase().replace(/^www\./, '').replace(/\.$/, '');
+    return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password && !url.port && host === domain ? url.href : null;
+  } catch { return null; }
+};
 const errorStatus = (error: unknown) => error && typeof error === 'object' && 'status' in error ? error.status : null;
 const discoveryError = (error: unknown) => {
   if (error && typeof error === 'object' && 'data' in error) {
@@ -125,6 +133,7 @@ export function CompanyDiscovery({ targetDomain, peerAvailable, locked, onChoose
           {results.data.data.map((company, index) => {
             const domain = validDomain(company.domain);
             const href = listingHref(company.listingUrl);
+             const site = websiteHref(company.website, domain);
             const id = `${company.slug || 'listing'}-${index}`;
             return <article className="discovery-item" key={id} data-testid={`card-discovery-company-${id}`}>
               <div className="discovery-item-main">
@@ -139,6 +148,7 @@ export function CompanyDiscovery({ targetDomain, peerAvailable, locked, onChoose
               </div>
               <div className="discovery-item-actions">
                 {href && <a href={href} target="_blank" rel="noopener noreferrer" data-testid={`link-discovery-listing-${id}`}>Provider listing <ExternalLink size={12} aria-hidden="true"/></a>}
+                 {site && <a href={site} target="_blank" rel="noopener noreferrer" data-testid={`link-discovery-website-${id}`}>Website <ExternalLink size={12} aria-hidden="true"/></a>}
                 <button type="button" disabled={!domain || locked} onClick={() => domain && chooseTarget(company, domain)} data-testid={`button-discovery-target-${id}`}>Use as target</button>
                 <button type="button" disabled={!domain || !peerAvailable || locked} onClick={() => domain && choosePeer(domain)} data-testid={`button-discovery-peer-${id}`} title={!peerAvailable ? 'All peer slots are filled; edit the comparison form to make room.' : undefined}><Plus size={12} aria-hidden="true"/> Add as peer</button>
               </div>
