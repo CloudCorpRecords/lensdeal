@@ -1,4 +1,4 @@
-# DealLens / Evidence before conviction
+# Lens Deal / Evidence before conviction
 
 ## Treatment
 28 seconds, 9:16 vertical. Audience: business brokers and acquisition deal teams.
@@ -17,13 +17,13 @@ Brand source: https://lensdeal.replit.app/. Plain typeset product name, matching
 |4–10|Your acquisition research desk.|Cream editorial dossier, full-width product portrait|Source marker enlarges while dossier rotates|
 |10–16|Ask a better question.|Dark question at top, sequential source-backed answer below|Citation rail draws downward into seller checklist|
 |16–22|Know what to verify.|Cream checklist, large numbered action rows|Checklist folds toward center; green rules become brand framing|
-|22–28|DealLens / Evidence before conviction.|Lime brand finale, centered large serif name|Brand contracts slightly into opening green field|
+|22–28|Lens Deal / Evidence before conviction.|Lime brand finale, centered large serif name|Brand contracts slightly into opening green field|
 
 ## Shot 1 / 0–4s
 Purpose: acquisition decisions need evidence. Copy: “BEFORE YOU BUY” at 0; “Follow the” at .15, “evidence.” at .6; slips “TRAFFIC”, “SOURCES”, “SELLER QUESTIONS” at .5, 1, 1.5; footer “Acquisition research. Not guesswork.” at 2.
 Composition: headline upper 20–43%, slips lower 50–76%, green field with cream type. Slips occupy 80% width, rotate -8/+6/-3 degrees. No copy collision.
 Idea: scattered research becomes an organized dossier.
-Choreography: headline masked; three stiff paper snaps every .5s; slips align and converge at 2.6; camera pushes 3.2–4 while paper remains visible. Persistent small DealLens header.
+Choreography: headline masked; three stiff paper snaps every .5s; slips align and converge at 2.6; camera pushes 3.2–4 while paper remains visible. Persistent small Lens Deal header.
 Transition: paper rectangle and cream field match next dossier; outgoing scale and incoming unfold overlap.
 Assets: code-drawn document slips and real brand typography. Instrumental begins immediately.
 
@@ -56,7 +56,7 @@ Assets: code-drawn rules, real type. Same bed.
 
 ## Shot 5 / 22–28s
 Purpose: memorable product and URL.
-Copy: “FOR BROKERS & DEAL TEAMS” at 0; “DealLens” at .4; “Evidence before conviction.” at 1.2; “lensdeal.replit.app” at 2; “Research the traffic. Ask the right questions.” at 3.
+Copy: “FOR BROKERS & DEAL TEAMS” at 0; “Lens Deal” at .4; “Evidence before conviction.” at 1.2; “lensdeal.replit.app” at 2; “Research the traffic. Ask the right questions.” at 3.
 Composition: lime field; dark name 18vmin centered at 42%; tagline beneath; URL 5vmin at 68%; no CTA button.
 Idea: complexity resolves into a single readable brand.
 Choreography: serif letters reveal with 35ms offsets; fine horizontal framing rules draw 1–2s; URL resolves 2–2.4; quiet readable hold with small camera approach through 5; last second contracts rules and deepens field toward opening.

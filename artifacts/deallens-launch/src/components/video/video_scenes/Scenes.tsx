@@ -7,7 +7,7 @@ function Reveal({children, delay=0, className=''}:{children:ReactNode;delay?:num
 }
 function Stage({children,mode='',name}:{children:ReactNode;mode?:string;name:string}) {
   return <motion.section data-scene={name} className={`film-scene ${mode}`} initial={{clipPath:'inset(0 0 0 0)',scale:1.08}} animate={{scale:1}} exit={{opacity:0,scale:1.17,rotate:2}} transition={{duration:.65,ease}}>
-    <div className="film-top"><span>DealLens</span><span>ACQUISITION RESEARCH</span></div>{children}
+    <div className="film-top"><span>Lens Deal</span><span>ACQUISITION RESEARCH</span></div>{children}
   </motion.section>;
 }
 export function Scene1(){
@@ -19,7 +19,7 @@ export function Scene1(){
 export function Scene2(){
   return <Stage name="desk" mode="cream"><div className="feature-heading"><small>THE RESEARCH DESK</small><Reveal delay={.2}><h2>A clearer view<br/>of the <em>deal.</em></h2></Reveal></div>
     <motion.div className="dossier" initial={{rotateX:16,rotate:-4,scale:.92}} animate={{rotateX:0,rotate:0,scale:1.03}} transition={{duration:5.8,ease}}>
-      <div className="dossier-head">DEALLENS / RESEARCH SET <span>↗</span></div>
+      <div className="dossier-head">LENS DEAL / RESEARCH SET <span>↗</span></div>
       {[
         ['Compare domains','Similarweb traffic estimates'],
         ['Save your research','Source-linked reports'],
@@ -46,7 +46,7 @@ export function Scene4(){
 export function Scene5(){
   return <Stage name="brand" mode="lime"><div className="brand-audience">FOR BROKERS & DEAL TEAMS</div>
     <motion.div className="brand-lockup" animate={{scale:[1,1.04,1]}} transition={{duration:6,times:[0,.8,1]}}>
-      <h1>{'DealLens'.split('').map((letter,i)=><motion.span key={i} style={{display:'inline-block'}} initial={{opacity:0,rotateX:70,y:15}} animate={{opacity:1,rotateX:0,y:0}} transition={{delay:.4+i*.035,duration:.7}}>{letter}</motion.span>)}</h1>
+      <h1>{'Lens Deal'.split('').map((letter,i)=><motion.span key={i} style={{display:'inline-block',width:letter === ' ' ? '.24em' : undefined}} initial={{opacity:0,rotateX:70,y:15}} animate={{opacity:1,rotateX:0,y:0}} transition={{delay:.4+i*.035,duration:.7}}>{letter === ' ' ? '\u00a0' : letter}</motion.span>)}</h1>
       <Reveal delay={1.2}><p>Evidence before conviction.</p></Reveal>
       <motion.div className="brand-rule" initial={{scaleX:0}} animate={{scaleX:1}} transition={{delay:1,duration:1}}/>
     </motion.div>

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pause, Play, Repeat, Volume2, VolumeX, ChevronDown, ChevronUp } from 'lucide-react';
 import VideoTemplate,{SCENE_DURATIONS} from './VideoTemplate';
 import {useSceneControls} from './useSceneControls';
-const titles=['Follow the evidence','Research desk','Crusoe copilot','Seller verification','DealLens'];
+const titles=['Follow the evidence','Research desk','Crusoe copilot','Seller verification','Lens Deal'];
 function Status({active,tick,paused,onJump}:{active:number;tick:number;paused:boolean;onJump:(i:number)=>void}){
   const [elapsed,setElapsed]=useState(0);const base=useRef(0);
   const values=Object.values(SCENE_DURATIONS);
