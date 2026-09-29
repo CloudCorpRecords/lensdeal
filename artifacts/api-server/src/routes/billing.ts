@@ -4,9 +4,17 @@ import { accounts, db } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { accountId, requireAuth } from "../middlewares/requireAuth";
 import { accountPeriod, limitsFor, usageCount } from "../lib/usage";
-import { getStripeClient } from "../lib/stripeClient";
-import { getVerifiedTestPrice, isStripeBillingReady } from "../lib/billingState";
+import { stripeGet, stripePost } from "../lib/stripeClient";
+import {
+  getVerifiedTestPrice,
+  isStripeBillingReady,
+  isStripePeriodicReconciliationReady,
+  isStripeWebhookReady,
+  stripeWebhookStatusNote,
+} from "../lib/billingState";
 import { approvedBillingOrigin } from "../lib/billingRedirect";
+import { verifyApprovedTestPrice } from "../lib/stripeValidation";
+import { createHash } from "node:crypto";
 
 const router: IRouter = Router();
 const tiers = ["pro", "team", "enterprise"] as const;
@@ -33,7 +41,13 @@ router.get("/billing/plans", (_req, res) => {
       { tier: "team", name: "Team", monthlyPrice: teamPrice?.amountMinor ?? 0, currency: teamPrice?.currency ?? null, monthlyPriceDisplay: teamPrice?.display ?? null, screenLimit: 250, aiLimit: 500, checkoutAvailable: configuredCheckout("team") },
       { tier: "enterprise", name: "Enterprise", monthlyPrice: enterprisePrice?.amountMinor ?? 0, currency: enterprisePrice?.currency ?? null, monthlyPriceDisplay: enterprisePrice?.display ?? null, screenLimit: 1000, aiLimit: 2000, checkoutAvailable: configuredCheckout("enterprise") },
     ],
-    note: "For configured test prices, monthlyPrice is the exact integer Stripe amount in the currency's smallest unit; currency and monthlyPriceDisplay provide the corresponding currency and formatted monthly amount. A monthlyPrice of 0 with no display means no approved test price is configured. Live charges remain disabled pending explicit live-price approval and confirmation of Similarweb external-use rights.",
+    billingStatus: {
+      enabled: isStripeBillingReady(),
+      webhookVerified: isStripeWebhookReady(),
+      periodicReconciliationVerified: isStripePeriodicReconciliationReady(),
+      limitation: stripeWebhookStatusNote(),
+    },
+    note: "For configured test prices, monthlyPrice is the exact integer Stripe amount in the currency's smallest unit; currency and monthlyPriceDisplay provide the corresponding currency and formatted monthly amount. A monthlyPrice of 0 with no display means no approved test price is configured. Stripe remains test-only; live charges are disabled.",
   });
 });
 
@@ -76,34 +90,59 @@ router.post("/billing/checkout", async (req, res): Promise<void> => {
     return;
   }
   try {
-    const stripe = await getStripeClient();
-    const price = await stripe.prices.retrieve(priceId);
-    if (!price.active || price.livemode || !price.recurring || price.recurring.interval !== "month") {
-      res.status(503).json({ error: "The configured Stripe price is not an active monthly test subscription price." });
-      return;
-    }
+    await verifyApprovedTestPrice(tier, priceId);
     const owner = accountId(res);
     const [account] = await db.select().from(accounts).where(eq(accounts.id, owner)).limit(1);
     let customerId = account?.stripeCustomerId ?? null;
+    let customer: Record<string, unknown> | null = null;
     if (!customerId) {
-      const customer = await stripe.customers.create({ metadata: { clerkUserId: owner } });
-      customerId = customer.id;
+      const customerForm = new URLSearchParams();
+      customerForm.set("metadata[clerkUserId]", owner);
+      const customerResult = await stripePost(
+        "/v1/customers",
+        customerForm,
+        `deallens-customer-${createHash("sha256").update(owner).digest("hex")}`,
+      );
+      if (customerResult.livemode !== false || typeof customerResult.id !== "string") {
+        throw new Error("Stripe did not return a verified test-mode customer.");
+      }
+      customer = customerResult;
+      customerId = customerResult.id;
       await db.insert(accounts).values({ id: owner, stripeCustomerId: customerId }).onConflictDoUpdate({
         target: accounts.id,
         set: { stripeCustomerId: customerId, updatedAt: new Date() },
       });
+    } else {
+      customer = await stripeGet(`/v1/customers/${encodeURIComponent(customerId)}`);
+      const metadata = customer.metadata && typeof customer.metadata === "object"
+        ? customer.metadata as Record<string, unknown>
+        : null;
+      if (customer.livemode !== false || customer.id !== customerId || customer.deleted === true) {
+        throw new Error("The stored Stripe customer is not a verified test-mode customer.");
+      }
+      if (metadata?.clerkUserId !== owner) {
+        throw new Error("The stored Stripe customer does not belong to this account.");
+      }
     }
-    const session = await stripe.checkout.sessions.create({
+    if (!customer) throw new Error("Could not verify the Stripe test customer.");
+    const sessionForm = new URLSearchParams({
       customer: customerId,
-      line_items: [{ price: priceId, quantity: 1 }],
       mode: "subscription",
       success_url: `${origin}/deal-lens/plans?billing=success`,
       cancel_url: `${origin}/deal-lens/plans?billing=cancelled`,
       client_reference_id: owner,
-      subscription_data: { metadata: { clerkUserId: owner, tier } },
-      metadata: { clerkUserId: owner, tier },
+      "line_items[0][price]": priceId,
+      "line_items[0][quantity]": "1",
+      "subscription_data[metadata][clerkUserId]": owner,
+      "subscription_data[metadata][tier]": tier,
+      "metadata[clerkUserId]": owner,
+      "metadata[tier]": tier,
     });
-    if (!session.url) throw new Error("Stripe did not return a hosted checkout URL.");
+    const session = await stripePost("/v1/checkout/sessions", sessionForm);
+    if (session.livemode !== false || session.mode !== "subscription"
+      || typeof session.url !== "string" || !session.url.startsWith("https://checkout.stripe.com/")) {
+      throw new Error("Stripe did not return a verified test-mode checkout session.");
+    }
     res.json({ url: session.url });
   } catch (error) {
     req.log.warn({ err: error }, "Stripe checkout unavailable");
@@ -128,11 +167,27 @@ router.post("/billing/portal", async (req, res): Promise<void> => {
     return;
   }
   try {
-    const stripe = await getStripeClient();
-    const session = await stripe.billingPortal.sessions.create({
+    const customer = await stripeGet(`/v1/customers/${encodeURIComponent(account.stripeCustomerId)}`);
+    if (customer.livemode !== false || customer.id !== account.stripeCustomerId || customer.deleted === true) {
+      res.status(409).json({ error: "The account is not associated with a verified Stripe test customer." });
+      return;
+    }
+    const metadata = customer.metadata && typeof customer.metadata === "object"
+      ? customer.metadata as Record<string, unknown>
+      : null;
+    if (metadata?.clerkUserId !== owner) {
+      res.status(409).json({ error: "The Stripe test customer does not belong to this account." });
+      return;
+    }
+    const portalForm = new URLSearchParams({
       customer: account.stripeCustomerId,
       return_url: `${origin}/deal-lens/plans`,
     });
+    const session = await stripePost("/v1/billing_portal/sessions", portalForm);
+    if (session.livemode !== false || typeof session.url !== "string"
+      || !session.url.startsWith("https://billing.stripe.com/")) {
+      throw new Error("Stripe did not return a verified test-mode portal session.");
+    }
     res.json({ url: session.url });
   } catch (error) {
     req.log.warn({ err: error }, "Stripe portal unavailable");

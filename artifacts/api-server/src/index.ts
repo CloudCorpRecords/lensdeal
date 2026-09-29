@@ -16,8 +16,6 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-await initializeStripeBilling();
-
 app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
@@ -25,4 +23,8 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+});
+
+void initializeStripeBilling().catch(() => {
+  logger.warn("Stripe test billing initialization failed unexpectedly; API remains available with billing disabled.");
 });

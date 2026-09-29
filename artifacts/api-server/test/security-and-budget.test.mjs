@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import test from "node:test";
 import { sameOriginSecurity } from "../src/middlewares/sameOriginSecurity.ts";
 import { ProviderError, Semaphore } from "../src/lib/screener.ts";
+import { verifyStripeSignature } from "../src/lib/stripeWebhookSignature.ts";
 
 function response() {
   return {
@@ -74,4 +76,19 @@ test("Similarweb semaphore caps active work and bounds its waiting queue", async
   const releaseThree = await thirdRequest;
   releaseTwo();
   releaseThree();
+});
+
+test("Stripe webhook signatures use exact raw payload, timing-safe digest, and tolerance", () => {
+  const secret = "whsec_test_only_example";
+  const payload = Buffer.from('{"id":"evt_test","livemode":false}');
+  const now = 1_750_000_000_000;
+  const timestamp = Math.floor(now / 1000);
+  const digest = createHmac("sha256", secret)
+    .update(Buffer.concat([Buffer.from(`${timestamp}.`), payload]))
+    .digest("hex");
+  const header = `t=${timestamp},v1=${digest}`;
+
+  assert.equal(verifyStripeSignature(payload, header, secret, now), true);
+  assert.equal(verifyStripeSignature(Buffer.from(`${payload.toString()} `), header, secret, now), false);
+  assert.equal(verifyStripeSignature(payload, header, secret, now + 301_000), false);
 });

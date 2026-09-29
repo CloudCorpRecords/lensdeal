@@ -402,7 +402,9 @@ components:
       properties:
         tier: { type: string, enum: [free, pro, team, enterprise] }
         name: { type: string }
-        monthlyPrice: { type: integer }
+        monthlyPrice: { type: integer, description: "Minor units of the listed currency; zero when not configured." }
+        currency: { type: ["string", "null"] }
+        monthlyPriceDisplay: { type: ["string", "null"] }
         screenLimit: { type: integer }
         aiLimit: { type: integer }
         checkoutAvailable: { type: boolean }

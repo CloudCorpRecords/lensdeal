@@ -1,4 +1,4 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-24", "python-base-3.13"]
 
 [deployment]
 router = "application"
@@ -18,3 +18,11 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.development]
+STRIPE_APPROVED_TEST_PRICE_ID_ENTERPRISE = "price_1UL66gABvH7UVNytkJtbplUw"
+STRIPE_APPROVED_TEST_PRICE_ID_PRO = "price_1UL66bABvH7UVNytJPTiXtEk"
+STRIPE_APPROVED_TEST_PRICE_ID_TEAM = "price_1UL66dABvH7UVNytDeSOrFJX"
+STRIPE_BILLING_MODE = "test"

@@ -26,7 +26,7 @@ const message = (error: unknown) => {
   }
   return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
 };
-const priceLabel = (tier: string, price: number, checkoutAvailable: boolean) => tier === 'free' ? 'Free' : price > 0 ? `$${price}` : checkoutAvailable ? 'Price at checkout' : 'Price pending';
+const priceLabel = (tier: string, price: number, display?: string | null) => tier === 'free' ? 'Free' : price === 0 ? 'Price pending' : display?.trim() || 'Price shown at checkout';
 const safeUrl = (value: string) => { try { const url = new URL(value); return ['https:','http:'].includes(url.protocol) ? url.href : null; } catch { return null; } };
 // The generated client calls root-relative /api paths. Under any Vite BASE_PATH,
 // those stay on this origin (the shared API mount) and carry the Clerk session cookie.
@@ -254,11 +254,11 @@ export function Plans() {
     <section style={{marginTop:60}}><span className="dl-eyebrow">Available plans</span><h2 style={{fontSize:40,fontWeight:500,letterSpacing:'-.05em'}}>Choose your research capacity.</h2>
       {catalog.isLoading ? <Loading/> : catalog.isError ? <QueryState error={catalog.error} retry={() => void catalog.refetch()}/> : <>
         <div className="dl-pricing-grid" style={{marginTop:30}}>{catalog.data?.plans.map(plan => <article className="dl-price" key={plan.tier}>
-          <span className="dl-eyebrow">{plan.tier}</span><h3>{plan.name}</h3><strong>{priceLabel(plan.tier,plan.monthlyPrice,plan.checkoutAvailable)}</strong>{plan.monthlyPrice > 0 && <span style={{fontSize:12}}>/ month</span>}
+          <span className="dl-eyebrow">{plan.tier}</span><h3>{plan.name}</h3><strong>{priceLabel(plan.tier,plan.monthlyPrice,plan.monthlyPriceDisplay)}</strong>
           <p>{plan.screenLimit} screen units and {plan.aiLimit} AI questions per period.</p>
-          {account.data?.tier === plan.tier ? <span style={{marginTop:'auto',fontWeight:700}}>Current plan</span> : plan.tier === 'free' ? <span style={{marginTop:'auto'}}>Included entry plan</span> : <button type="button" className="desk-button" style={{marginTop:'auto'}} disabled={!account.data?.billingEnabled || !plan.checkoutAvailable || checkout.isPending} onClick={() => void begin(plan.tier as 'pro'|'team'|'enterprise')} data-testid={`button-checkout-${plan.tier}`}>{checkout.isPending ? 'Opening…' : !account.data?.billingEnabled ? 'Billing unavailable' : !plan.checkoutAvailable ? 'Checkout unavailable' : 'Choose plan'} <ArrowRight size={15}/></button>}
+          {account.data?.tier === plan.tier ? <span style={{marginTop:'auto',fontWeight:700}}>Current plan</span> : plan.tier === 'free' ? <span style={{marginTop:'auto'}}>Included entry plan</span> : <button type="button" className="desk-button" style={{marginTop:'auto'}} disabled={!account.data?.billingEnabled || !plan.checkoutAvailable || checkout.isPending} onClick={() => void begin(plan.tier as 'pro'|'team'|'enterprise')} data-testid={`button-checkout-${plan.tier}`}>{checkout.isPending ? 'Opening TEST checkout…' : !account.data?.billingEnabled ? 'Billing unavailable' : !plan.checkoutAvailable ? 'Checkout unavailable' : 'TEST checkout'} <ArrowRight size={15}/></button>}
         </article>)}</div>
-        <p className="desk-note">{catalog.data?.note}</p>{account.data && !account.data.billingEnabled && <p className="desk-note">Checkout is disabled because billing is not enabled for this account. Your current allowance remains available.</p>}
+        <p className="desk-note">Stripe TEST mode only. No live charge will be made.</p><p className="desk-note">{catalog.data?.note}</p>{account.data && !account.data.billingEnabled && <p className="desk-note">Checkout is disabled because billing is not enabled for this account. Your current allowance remains available.</p>}
       </>}
     </section>
   </Desk>;

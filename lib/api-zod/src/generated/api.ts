@@ -609,7 +609,9 @@ export const ListPlansResponse = zod.object({
   "plans": zod.array(zod.object({
   "tier": zod.enum(['free', 'pro', 'team', 'enterprise']),
   "name": zod.string(),
-  "monthlyPrice": zod.number().int(),
+  "monthlyPrice": zod.number().int().describe('Minor units of the listed currency; zero when not configured.'),
+  "currency": zod.string().nullish(),
+  "monthlyPriceDisplay": zod.string().nullish(),
   "screenLimit": zod.number().int(),
   "aiLimit": zod.number().int(),
   "checkoutAvailable": zod.boolean()

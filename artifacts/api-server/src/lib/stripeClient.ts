@@ -1,58 +1,103 @@
-import Stripe from "stripe";
-import { StripeSync } from "stripe-replit-sync";
+import { ReplitConnectors } from "@replit/connectors-sdk";
 
-export type StripeCredentials = { secretKey: string };
+export type StripeObject = Record<string, unknown>;
 
-async function getStripeCredentials(): Promise<StripeCredentials> {
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY
-    ? `repl ${process.env.REPL_IDENTITY}`
-    : process.env.WEB_REPL_RENEWAL
-      ? `depl ${process.env.WEB_REPL_RENEWAL}`
-      : null;
-  if (!hostname || !xReplitToken) throw new Error("Stripe connection is not available in this environment.");
+export class StripeProxyError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+    readonly code?: string,
+  ) {
+    super(message);
+  }
+}
+
+const connectors = new ReplitConnectors();
+
+function rejectLiveObjects(value: unknown): void {
+  if (Array.isArray(value)) {
+    for (const item of value) rejectLiveObjects(item);
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  const object = value as Record<string, unknown>;
+  if (object.livemode === true) {
+    throw new StripeProxyError("Live-mode Stripe objects are disabled.");
+  }
+  for (const child of Object.values(object)) rejectLiveObjects(child);
+}
+
+function errorCode(value: unknown): string | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const error = (value as Record<string, unknown>).error;
+  if (!error || typeof error !== "object") return undefined;
+  const code = (error as Record<string, unknown>).code
+    ?? (error as Record<string, unknown>).type;
+  return typeof code === "string" ? code.slice(0, 80) : undefined;
+}
+
+export function requireTestBillingMode(): void {
+  if (process.env.STRIPE_BILLING_MODE !== "test") {
+    throw new StripeProxyError("Stripe calls are disabled unless STRIPE_BILLING_MODE=test.");
+  }
+}
+
+export async function stripeGet<T extends StripeObject = StripeObject>(path: string): Promise<T> {
+  return stripeRequest<T>("GET", path);
+}
+
+export async function stripePost<T extends StripeObject = StripeObject>(
+  path: string,
+  body: URLSearchParams,
+  idempotencyKey?: string,
+): Promise<T> {
+  return stripeRequest<T>("POST", path, body, idempotencyKey);
+}
+
+async function stripeRequest<T extends StripeObject>(
+  method: "GET" | "POST" | "DELETE",
+  path: string,
+  body?: URLSearchParams,
+  idempotencyKey?: string,
+): Promise<T> {
+  requireTestBillingMode();
+  if (!path.startsWith("/") || path.startsWith("//")) {
+    throw new StripeProxyError("Stripe API paths must be relative to the connected Stripe API.");
+  }
+
   let response: Response;
   try {
-    response = await fetch(
-      `https://${hostname}/api/v2/connection?include_secrets=true&connector_names=stripe`,
-      { headers: { Accept: "application/json", X_REPLIT_TOKEN: xReplitToken }, signal: AbortSignal.timeout(10000) },
-    );
+    response = await connectors.proxy("stripe", path, {
+      method,
+      ...(body ? {
+        body,
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      } : {}),
+      ...(idempotencyKey ? { headers: {
+        ...(body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
+        "Idempotency-Key": idempotencyKey,
+      } } : {}),
+    });
   } catch {
-    throw new Error("Could not reach the connected Stripe account.");
+    throw new StripeProxyError("The authenticated Stripe connector proxy is unavailable.");
   }
-  if (!response.ok) throw new Error("Could not retrieve Stripe connection settings.");
-  const data = await response.json() as {
-    items?: Array<{ settings?: { secret_key?: unknown } }>;
-  };
-  const settings = data.items?.[0]?.settings;
-  if (typeof settings?.secret_key !== "string") {
-    throw new Error("Stripe connection is missing its server-side key.");
-  }
-  return { secretKey: settings.secret_key };
-}
 
-export async function getUncachableStripeClient(): Promise<Stripe> {
-  const { secretKey } = await getStripeCredentials();
-  if (!secretKey.startsWith("sk_test_")) {
-    throw new Error("Only Stripe test mode is enabled until pricing and usage rights are approved.");
+  let result: unknown;
+  try {
+    result = await response.json();
+  } catch {
+    throw new StripeProxyError("Stripe returned an invalid API response.", response.status);
   }
-  return new Stripe(secretKey);
-}
-
-export async function getStripeClient(): Promise<Stripe> {
-  return getUncachableStripeClient();
-}
-
-export async function getStripeSync(): Promise<StripeSync> {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) throw new Error("DATABASE_URL is required for Stripe synchronization.");
-  const { secretKey } = await getStripeCredentials();
-  if (!secretKey.startsWith("sk_test_")) {
-    throw new Error("Live-mode Stripe synchronization is disabled until pricing and Similarweb usage rights are approved.");
+  if (!response.ok) {
+    throw new StripeProxyError(
+      "The Stripe test API request failed.",
+      response.status,
+      errorCode(result),
+    );
   }
-  return new StripeSync({
-    poolConfig: { connectionString: databaseUrl },
-    stripeSecretKey: secretKey,
-    stripeWebhookSecret: "",
-  });
+  rejectLiveObjects(result);
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    throw new StripeProxyError("Stripe returned an invalid API object.", response.status);
+  }
+  return result as T;
 }

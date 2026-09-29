@@ -15,6 +15,10 @@ function artifactOrigins(): Set<string> {
     if (host && validHost(host)) origins.add(`https://${host}`);
   }
   if (process.env.NODE_ENV === "development") {
+    // The Replit preview routes through localhost:80, while the API listens
+    // on PORT. Both are local-only hosts and still require exact same-origin.
+    origins.add("http://localhost");
+    origins.add("http://127.0.0.1");
     const port = process.env.PORT;
     if (port && /^\d+$/.test(port)) {
       origins.add(`http://localhost:${port}`);

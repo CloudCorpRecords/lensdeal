@@ -10,7 +10,12 @@ import type { PlanTier } from './planTier';
 export interface Plan {
   tier: PlanTier;
   name: string;
+  /** Minor units of the listed currency; zero when not configured. */
   monthlyPrice: number;
+  /** @nullable */
+  currency?: string | null;
+  /** @nullable */
+  monthlyPriceDisplay?: string | null;
   screenLimit: number;
   aiLimit: number;
   checkoutAvailable: boolean;

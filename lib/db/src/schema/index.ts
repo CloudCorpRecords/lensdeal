@@ -103,3 +103,13 @@ export const processedStripeEvents = pgTable("deallens_stripe_events", {
   processedAt: timestamp("processed_at", { withTimezone: true }).notNull().defaultNow(),
   success: boolean("success").notNull().default(true),
 });
+
+export const stripeWebhookSecrets = pgTable("deallens_stripe_webhook_secrets", {
+  id: text("id").primaryKey(),
+  endpointId: text("endpoint_id").notNull(),
+  endpointUrl: text("endpoint_url").notNull(),
+  ciphertext: text("ciphertext").notNull(),
+  nonce: text("nonce").notNull(),
+  authTag: text("auth_tag").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
