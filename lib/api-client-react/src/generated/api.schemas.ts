@@ -5,6 +5,27 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface DiscoveryCompany {
+  name: string;
+  slug: string;
+  /** @nullable */
+  description: string | null;
+  /** @nullable */
+  category: string | null;
+  /** @nullable */
+  website: string | null;
+  /** @nullable */
+  domain: string | null;
+  listingUrl: string;
+  onSale: boolean;
+}
+
+export interface DiscoveryPage {
+  data: DiscoveryCompany[];
+  page: number;
+  hasMore: boolean;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -270,4 +291,49 @@ export interface CheckoutInput {
 export interface BillingLink {
   url: string;
 }
+
+export type DiscoverStartupsParams = {
+/**
+ * @minimum 1
+ * @maximum 20
+ */
+page?: number;
+category?: DiscoverStartupsCategory;
+onSale?: DiscoverStartupsOnSale;
+sort?: DiscoverStartupsSort;
+};
+
+export type DiscoverStartupsCategory = typeof DiscoverStartupsCategory[keyof typeof DiscoverStartupsCategory];
+
+
+export const DiscoverStartupsCategory = {
+  ai: 'ai',
+  saas: 'saas',
+  'developer-tools': 'developer-tools',
+  fintech: 'fintech',
+  marketing: 'marketing',
+  ecommerce: 'ecommerce',
+  productivity: 'productivity',
+  analytics: 'analytics',
+  education: 'education',
+  marketplace: 'marketplace',
+  'mobile-apps': 'mobile-apps',
+} as const;
+
+export type DiscoverStartupsOnSale = typeof DiscoverStartupsOnSale[keyof typeof DiscoverStartupsOnSale];
+
+
+export const DiscoverStartupsOnSale = {
+  true: 'true',
+  false: 'false',
+} as const;
+
+export type DiscoverStartupsSort = typeof DiscoverStartupsSort[keyof typeof DiscoverStartupsSort];
+
+
+export const DiscoverStartupsSort = {
+  'revenue-desc': 'revenue-desc',
+  'listed-desc': 'listed-desc',
+  'best-deal': 'best-deal',
+} as const;
 

@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { Form } from '@/components/ui/form';
 import { ScreenReport } from '@/components/screen-report';
 import { ExplanationAnswer } from '@/components/explanation-answer';
+import { CompanyDiscovery } from '@/components/company-discovery';
 import {
   useGetAccount, useListScreens, useCreateScreen, useGetScreen, useDeleteScreen,
   useListCompilations, useCreateCompilation, useGetCompilation, useDeleteCompilation,
@@ -88,6 +89,31 @@ export function Workspace() {
   const domainCount = 1 + peerCount;
   const requiredUnits = Math.max(1,peerCount);
   const pendingBatch = batch !== null && batch.nextIndex < batch.inputs.length;
+  const targetEntry = form.watch('targetDomain');
+  const peerEntry = form.watch('comparisonDomain');
+  const peerAvailable = !peerEntry.trim() || (enterprise && (extras.some(value => !value.trim()) || extras.length < 18));
+  function chooseDiscoveryTarget(domain:string) {
+    if (running || pendingBatch) return {ok:false,message:'Finish the current research set before changing domains.'};
+    if (domain === parseDomain(peerEntry) || extras.some(value => parseDomain(value) === domain)) return {ok:false,message:'This domain is already in a peer field. Each domain in a screen must be different.'};
+    form.setValue('targetDomain',domain,{shouldDirty:true,shouldTouch:true});
+    setError('');
+    return {ok:true,message:`${domain} is now in the editable target field. Review it above before running a screen.`};
+  }
+  function chooseDiscoveryPeer(domain:string) {
+    if (running || pendingBatch) return {ok:false,message:'Finish the current research set before changing domains.'};
+    if (domain === parseDomain(form.getValues('targetDomain')) || domain === parseDomain(form.getValues('comparisonDomain')) || extras.some(value => parseDomain(value) === domain)) return {ok:false,message:'This domain is already in your screen. Choose a different company.'};
+    if (!form.getValues('comparisonDomain').trim()) {
+      form.setValue('comparisonDomain',domain,{shouldDirty:true,shouldTouch:true});
+    } else if (enterprise) {
+      const emptyIndex = extras.findIndex(value => !value.trim());
+      if (emptyIndex >= 0) setExtras(current => current.map((value,index) => index === emptyIndex ? domain : value));
+      else if (extras.length < 18) setExtras(current => [...current,domain]);
+      else return {ok:false,message:'The 19 peer slots are filled. Remove a peer before adding another.'};
+    } else return {ok:false,message:'Your plan supports one peer. Clear the existing peer before selecting another.'};
+    setMode('compare');
+    setError('');
+    return {ok:true,message:`${domain} was added as an editable peer. Comparison mode is ready; no screen has run.`};
+  }
   async function runBatch(work:BatchWork) {
     if (running) return;
     setError(''); setRunning(true);
@@ -178,6 +204,7 @@ export function Workspace() {
       </section>
       <aside className="desk-panel"><span className="dl-eyebrow">Your capacity</span>{account.isLoading ? <Loading/> : account.isError ? <QueryState error={account.error} retry={() => void account.refetch()}/> : account.data && <><h2 style={{marginTop:20}}>{account.data.tier.toUpperCase()} plan</h2><p>Screens used <strong>{account.data.screensUsed} / {account.data.screenLimit}</strong></p><div className="desk-meter"><span style={{width:`${Math.min(100,account.data.screenLimit ? account.data.screensUsed/account.data.screenLimit*100 : 0)}%`}}/></div><p>AI questions used <strong>{account.data.aiUsed} / {account.data.aiLimit}</strong></p><div className="desk-meter"><span style={{width:`${Math.min(100,account.data.aiLimit ? account.data.aiUsed/account.data.aiLimit*100 : 0)}%`}}/></div><p className="desk-note">Allowance resets {dateLabel(account.data.resetsAt)}.</p>{remaining === 0 && <p className="desk-alert">You've used your current screen allowance. Check plans or return after your reset.</p>}<Link href="/plans" className="desk-button secondary" data-testid="link-view-plan">View plan <ArrowRight size={14}/></Link></>}</aside>
     </div>
+    <CompanyDiscovery targetDomain={targetEntry} peerAvailable={peerAvailable} locked={running || pendingBatch} onChooseTarget={chooseDiscoveryTarget} onChoosePeer={chooseDiscoveryPeer}/>
     {report && <div style={{marginTop:45}}><ScreenReport report={report}/></div>}
     <section style={{marginTop:70}}><div className="desk-heading"><div><span className="dl-eyebrow">Continued work</span><h1 style={{fontSize:44}}>Recent briefs</h1></div><Link href="/history" className="desk-button secondary" data-testid="link-all-history">View all reports <ArrowRight size={15}/></Link></div>{screens.isLoading ? <Loading/> : screens.isError ? <QueryState error={screens.error} retry={() => void screens.refetch()}/> : screens.data?.length ? <SavedRows screens={screens.data.slice(0,4)}/> : <Empty title="The desk is clear." body="Your completed screens will appear here once you run your first target-only or comparison screen."/>}</section>
   </Desk>;

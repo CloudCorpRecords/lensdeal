@@ -157,6 +157,37 @@ export const GetAccountResponse = zod.object({
 
 
 /**
+ * @summary Browse a bounded page of TrustMRR listings for domain selection
+ */
+export const discoverStartupsQueryPageDefault = 1;
+export const discoverStartupsQueryPageMax = 20;
+
+export const discoverStartupsQuerySortDefault = `revenue-desc`;
+
+export const DiscoverStartupsQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).max(discoverStartupsQueryPageMax).default(discoverStartupsQueryPageDefault),
+  "category": zod.enum(['ai', 'saas', 'developer-tools', 'fintech', 'marketing', 'ecommerce', 'productivity', 'analytics', 'education', 'marketplace', 'mobile-apps']).optional(),
+  "onSale": zod.enum(['true', 'false']).optional(),
+  "sort": zod.enum(['revenue-desc', 'listed-desc', 'best-deal']).default(discoverStartupsQuerySortDefault)
+})
+
+export const DiscoverStartupsResponse = zod.object({
+  "data": zod.array(zod.object({
+  "name": zod.string(),
+  "slug": zod.string(),
+  "description": zod.string().nullable(),
+  "category": zod.string().nullable(),
+  "website": zod.string().nullable(),
+  "domain": zod.string().nullable(),
+  "listingUrl": zod.string(),
+  "onSale": zod.boolean()
+})),
+  "page": zod.number().int(),
+  "hasMore": zod.boolean()
+})
+
+
+/**
  * @summary List my completed screens
  */
 export const ListScreensResponseItem = zod.object({

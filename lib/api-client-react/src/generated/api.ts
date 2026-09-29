@@ -26,6 +26,8 @@ import type {
   Compilation,
   CompilationDetail,
   CompilationInput,
+  DiscoverStartupsParams,
+  DiscoveryPage,
   Explanation,
   ExplanationInput,
   HealthStatus,
@@ -294,6 +296,90 @@ export function useGetAccount<TData = Awaited<ReturnType<typeof getAccount>>, TE
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetAccountQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDiscoverStartupsUrl = (params?: DiscoverStartupsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/discover/startups?${stringifiedParams}` : `/api/discover/startups`
+}
+
+/**
+ * @summary Browse a bounded page of TrustMRR listings for domain selection
+ */
+export const discoverStartups = async (params?: DiscoverStartupsParams, options?: Parameters<typeof customFetch>[1]): Promise<DiscoveryPage> => {
+
+  return customFetch<DiscoveryPage>(getDiscoverStartupsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDiscoverStartupsQueryKey = (params?: DiscoverStartupsParams,) => {
+    return [
+    `/api/discover/startups`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getDiscoverStartupsQueryOptions = <TData = Awaited<ReturnType<typeof discoverStartups>>, TError = ErrorType<void>>(params?: DiscoverStartupsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof discoverStartups>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDiscoverStartupsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof discoverStartups>>> = ({ signal }) => discoverStartups(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof discoverStartups>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DiscoverStartupsQueryResult = NonNullable<Awaited<ReturnType<typeof discoverStartups>>>
+export type DiscoverStartupsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Browse a bounded page of TrustMRR listings for domain selection
+ */
+
+export function useDiscoverStartups<TData = Awaited<ReturnType<typeof discoverStartups>>, TError = ErrorType<void>>(
+ params?: DiscoverStartupsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof discoverStartups>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDiscoverStartupsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
