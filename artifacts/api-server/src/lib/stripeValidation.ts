@@ -1,4 +1,4 @@
-import { approvedTestPrices, type VerifiedTestPrice } from "./billingState";
+import { approvedTestPrices, expectedLiveMode, type VerifiedTestPrice } from "./billingState";
 import { stripeGet, type StripeObject } from "./stripeClient";
 
 export type BillingTier = "pro" | "team" | "enterprise";
@@ -23,9 +23,9 @@ function productIdFor(price: StripeObject): string | null {
   return null;
 }
 
-function requireFalseLiveMode(object: StripeObject, kind: string): void {
-  if (field(object, "livemode") !== false) {
-    throw new Error(`Configured Stripe ${kind} is not verified as a test-mode object.`);
+function requireCorrectMode(object: StripeObject, kind: string): void {
+  if (field(object, "livemode") !== expectedLiveMode()) {
+    throw new Error(`Configured Stripe ${kind} is not verified in the selected billing environment.`);
   }
 }
 
@@ -35,11 +35,11 @@ export async function verifyApprovedTestPrice(
 ): Promise<VerifiedTestPrice> {
   const priceId = expectedPriceId ?? approvedTestPrices()[tier];
   if (!priceId || priceId !== approvedTestPrices()[tier]) {
-    throw new Error(`An explicitly approved test price ID is not configured for ${tier}.`);
+    throw new Error(`An explicitly approved price ID is not configured for ${tier}.`);
   }
   const price = await stripeGet(`/v1/prices/${encodeURIComponent(priceId)}`);
   if (field(price, "id") !== priceId) throw new Error("Stripe returned a different price than requested.");
-  requireFalseLiveMode(price, "price");
+  requireCorrectMode(price, "price");
   const recurring = field(price, "recurring");
   const interval = recurring && typeof recurring === "object"
     ? (recurring as StripeObject).interval
@@ -58,9 +58,16 @@ export async function verifyApprovedTestPrice(
   const productId = productIdFor(price);
   if (!productId) throw new Error("The approved Stripe price has no verifiable product.");
   const product = await stripeGet(`/v1/products/${encodeURIComponent(productId)}`);
-  requireFalseLiveMode(product, "product");
+  requireCorrectMode(product, "product");
   if (field(product, "id") !== productId || field(product, "active") !== true) {
     throw new Error("The approved Stripe price product is not active and verified.");
+  }
+  const metadata = field(product, "metadata");
+  const label = metadata && typeof metadata === "object" ? (metadata as StripeObject) : {};
+  if (label.deallens_tier !== tier
+    || label.environment !== (expectedLiveMode() ? "live" : "test")
+    || product.name !== `DealLens ${tier[0].toUpperCase()}${tier.slice(1)}`) {
+    throw new Error("The Stripe product does not match the approved tier and billing environment.");
   }
 
   const currency = "USD";

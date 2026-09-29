@@ -5,8 +5,10 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PlanCatalogBillingStatusMode } from './planCatalogBillingStatusMode';
 
 export type PlanCatalogBillingStatus = {
+  mode: PlanCatalogBillingStatusMode;
   enabled: boolean;
   webhookVerified: boolean;
   periodicReconciliationVerified: boolean;

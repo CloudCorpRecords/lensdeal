@@ -8,6 +8,7 @@ import {
   savedScreens,
   usageCounters,
 } from "@workspace/db";
+import { billingMode } from "./billingState";
 
 export type UsageKind = "screens" | "ai";
 export type Tier = "free" | "pro" | "team" | "enterprise";
@@ -84,6 +85,7 @@ export async function accountPeriod(accountId: string) {
   const account = await ensureAccount(accountId);
   const now = new Date();
   const paid = account.tier !== "free"
+    && account.stripeBillingMode === billingMode()
     && account.subscriptionStatus === "active"
     && account.periodStart
     && account.periodEnd
@@ -119,6 +121,7 @@ export type Reservation = {
 
 function currentAccountPeriod(account: typeof accounts.$inferSelect, now: Date) {
   const paid = account.tier !== "free"
+    && account.stripeBillingMode === billingMode()
     && account.subscriptionStatus === "active"
     && !!account.periodStart
     && !!account.periodEnd

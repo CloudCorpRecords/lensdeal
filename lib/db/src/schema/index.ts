@@ -16,6 +16,8 @@ export const accounts = pgTable("deallens_accounts", {
   subscriptionStatus: text("subscription_status").notNull().default("inactive"),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  // Existing rows were created by sandbox billing. Never treat them as live entitlements.
+  stripeBillingMode: text("stripe_billing_mode").notNull().default("test"),
   periodStart: timestamp("period_start", { withTimezone: true }),
   periodEnd: timestamp("period_end", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

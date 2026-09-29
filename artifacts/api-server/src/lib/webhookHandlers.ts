@@ -3,6 +3,8 @@ import { accounts, db, processedStripeEvents } from "@workspace/db";
 import { logger } from "./logger";
 import {
   approvedTestPrices,
+  billingMode,
+  expectedLiveMode,
   isStripePeriodicReconciliationReady,
   setStripePeriodicReconciliationReady,
 } from "./billingState";
@@ -10,6 +12,7 @@ import { requireTestBillingMode, stripeGet, type StripeObject } from "./stripeCl
 import { verifyApprovedTestPrice, type BillingTier } from "./stripeValidation";
 import { getStripeWebhookSecret } from "./stripeWebhookSecrets";
 import { verifyStripeSignature } from "./stripeWebhookSignature";
+import { canReconcileBillingAccount } from "./billingOwnership";
 
 type StripeEvent = {
   id: string;
@@ -38,21 +41,23 @@ function priceTier(priceId: string): BillingTier | null {
 }
 
 function requireTestObject(object: StripeObject | null, kind: string): StripeObject {
-  if (!object || object.livemode !== false) {
-    throw new Error(`Stripe ${kind} was not verified as a test-mode object.`);
+  if (!object || object.livemode !== expectedLiveMode()) {
+    throw new Error(`Stripe ${kind} belongs to the wrong billing environment.`);
   }
   return object;
 }
 
-function rejectLiveEventObjects(value: unknown): void {
+function rejectWrongEventObjects(value: unknown): void {
   if (Array.isArray(value)) {
-    value.forEach(rejectLiveEventObjects);
+    value.forEach(rejectWrongEventObjects);
     return;
   }
   const object = asRecord(value);
   if (!object) return;
-  if (object.livemode === true) throw new Error("Live-mode Stripe event objects are disabled.");
-  Object.values(object).forEach(rejectLiveEventObjects);
+  if (typeof object.livemode === "boolean" && object.livemode !== expectedLiveMode()) {
+    throw new Error("Stripe event object belongs to the wrong billing environment.");
+  }
+  Object.values(object).forEach(rejectWrongEventObjects);
 }
 
 async function fetchAllSubscriptions(customerId: string): Promise<StripeObject[]> {
@@ -98,6 +103,7 @@ function accountPatch(owner: string, customerId: string, candidate?: {
     tier: candidate?.tier ?? "free",
     subscriptionStatus: candidate ? "active" : "inactive",
     stripeCustomerId: customerId,
+    stripeBillingMode: billingMode()!,
     stripeSubscriptionId: candidate?.subscriptionId ?? null,
     periodStart: candidate?.periodStart ?? null,
     periodEnd: candidate?.periodEnd ?? null,
@@ -123,6 +129,7 @@ async function persistEntitlement(
       tier: values.tier,
       subscriptionStatus: values.subscriptionStatus,
       stripeCustomerId: values.stripeCustomerId,
+      stripeBillingMode: values.stripeBillingMode,
       stripeSubscriptionId: values.stripeSubscriptionId,
       periodStart: values.periodStart,
       periodEnd: values.periodEnd,
@@ -141,13 +148,18 @@ export async function reconcileCustomerEntitlement(customerId: string): Promise<
   let owner = typeof metadata?.clerkUserId === "string" ? metadata.clerkUserId : null;
   if (!owner) {
     const [account] = await db.select({ id: accounts.id }).from(accounts)
-      .where(eq(accounts.stripeCustomerId, customerId)).limit(1);
+      .where(and(eq(accounts.stripeCustomerId, customerId), eq(accounts.stripeBillingMode, billingMode()!))).limit(1);
     owner = account?.id ?? null;
   }
   if (!owner) return;
 
   await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${owner}, 0))`);
+    const [current] = await tx.select({
+      stripeCustomerId: accounts.stripeCustomerId,
+      stripeBillingMode: accounts.stripeBillingMode,
+    }).from(accounts).where(eq(accounts.id, owner)).for("update").limit(1);
+    if (!canReconcileBillingAccount(current, billingMode()!, customerId)) return;
     const deleted = customer.deleted === true;
     const candidateSubscriptions = deleted ? [] : await fetchAllSubscriptions(customerId);
     const candidates: Array<{
@@ -166,7 +178,7 @@ export async function reconcileCustomerEntitlement(customerId: string): Promise<
       for (const itemValue of itemData) {
         const item = asRecord(itemValue);
         const price = asRecord(item?.price);
-        if (!item || !price || price.livemode !== false || typeof price.id !== "string") continue;
+        if (!item || !price || price.livemode !== expectedLiveMode() || typeof price.id !== "string") continue;
         const tier = priceTier(price.id);
         if (!tier) continue;
         await verifyApprovedTestPrice(tier, price.id);
@@ -197,8 +209,8 @@ async function reconcileAllCustomers(): Promise<void> {
   let afterId: string | undefined;
   while (true) {
     const conditions = afterId
-      ? and(isNotNull(accounts.stripeCustomerId), gt(accounts.id, afterId))
-      : isNotNull(accounts.stripeCustomerId);
+      ? and(isNotNull(accounts.stripeCustomerId), eq(accounts.stripeBillingMode, billingMode()!), gt(accounts.id, afterId))
+      : and(isNotNull(accounts.stripeCustomerId), eq(accounts.stripeBillingMode, billingMode()!));
     const rows = await db.select({ accountId: accounts.id, customerId: accounts.stripeCustomerId })
       .from(accounts)
       .where(conditions)
@@ -224,7 +236,7 @@ async function runPeriodicReconciliation(): Promise<void> {
       setStripePeriodicReconciliationReady(true);
     } catch {
       setStripePeriodicReconciliationReady(false);
-      logger.warn("Periodic Stripe test-mode entitlement reconciliation failed.");
+      logger.warn("Periodic Stripe entitlement reconciliation failed.");
     } finally {
       periodicRun = null;
     }
@@ -254,7 +266,7 @@ export class WebhookHandlers {
     requireTestBillingMode();
     if (!Buffer.isBuffer(payload)) throw new Error("Stripe webhook body is not a raw Buffer.");
     const stored = await getStripeWebhookSecret();
-    if (!stored) throw new Error("A verified Stripe test webhook endpoint is not configured.");
+    if (!stored) throw new Error("A verified Stripe webhook endpoint is not configured.");
     if (!verifyStripeSignature(payload, signature, stored.secret)) {
       throw new Error("Stripe webhook signature verification failed.");
     }
@@ -264,17 +276,19 @@ export class WebhookHandlers {
       || !event.data || !asRecord(event.data.object)) {
       throw new Error("Stripe webhook payload is invalid.");
     }
-    if (event.livemode !== false) throw new Error("Live-mode Stripe events are disabled.");
-    rejectLiveEventObjects(event);
+    if (event.livemode !== expectedLiveMode()) throw new Error("Stripe event belongs to the wrong billing environment.");
+    rejectWrongEventObjects(event);
+    const eventKey = `${billingMode()}:${event.id}`;
 
     const [claimed] = await db.insert(processedStripeEvents).values({
-      id: event.id,
+      id: eventKey,
       success: false,
     }).onConflictDoNothing().returning({ id: processedStripeEvents.id });
     if (!claimed) {
       const [existing] = await db.select({ success: processedStripeEvents.success })
-        .from(processedStripeEvents).where(eq(processedStripeEvents.id, event.id)).limit(1);
+        .from(processedStripeEvents).where(eq(processedStripeEvents.id, eventKey)).limit(1);
       if (existing?.success) return;
+      throw new Error("Stripe event is already being processed; retry later.");
     }
 
     try {
@@ -285,10 +299,10 @@ export class WebhookHandlers {
         if (customerId) await reconcileCustomerEntitlement(customerId);
       }
       await db.update(processedStripeEvents).set({ success: true })
-        .where(eq(processedStripeEvents.id, event.id));
+        .where(eq(processedStripeEvents.id, eventKey));
     } catch (error) {
       await db.delete(processedStripeEvents).where(and(
-        eq(processedStripeEvents.id, event.id),
+        eq(processedStripeEvents.id, eventKey),
         eq(processedStripeEvents.success, false),
       ));
       throw error;

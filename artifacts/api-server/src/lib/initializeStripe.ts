@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import { logger } from "./logger";
 import {
   approvedTestPrices,
+  billingMode,
+  expectedLiveMode,
   setStripeBillingReady,
   setStripePeriodicReconciliationReady,
   setStripeWebhookStatus,
@@ -22,10 +24,11 @@ const webhookEvents = [
 ];
 
 function configuredWebhookUrl(): string | null {
-  const configuredHost = process.env.REPLIT_DEV_DOMAIN
+  const configuredHost = (billingMode() === "test" ? process.env.REPLIT_DEV_DOMAIN : undefined)
     || process.env.REPLIT_DOMAINS?.split(",")[0]?.trim()
     || "";
   const host = configuredHost.trim().toLowerCase();
+  if (billingMode() === "live" && (host.endsWith(".replit.dev") || host === process.env.REPLIT_DEV_DOMAIN)) return null;
   if (!host || !/^[a-z0-9.-]+$/i.test(host)) return null;
   try {
     const parsed = new URL(`https://${host}`);
@@ -44,7 +47,7 @@ function webhookForm(url: string): URLSearchParams {
 
 async function endpointIsReady(endpointId: string, endpointUrl: string): Promise<boolean> {
   const endpoint = await stripeGet(`/v1/webhook_endpoints/${encodeURIComponent(endpointId)}`);
-  if (endpoint.livemode !== false) throw new Error("Stripe webhook endpoint was not verified as test-mode.");
+  if (endpoint.livemode !== expectedLiveMode()) throw new Error("Stripe webhook endpoint belongs to the wrong mode.");
   return endpoint.id === endpointId
     && endpoint.url === endpointUrl
     && endpoint.status === "enabled"
@@ -65,24 +68,24 @@ async function ensureTestWebhook(endpointUrl: string): Promise<void> {
       `/v1/webhook_endpoints/${encodeURIComponent(stored.endpointId)}`,
       webhookForm(endpointUrl),
     );
-    if (updated.livemode !== false || updated.id !== stored.endpointId || updated.url !== endpointUrl) {
-      throw new Error("Stripe did not confirm the saved test webhook endpoint.");
+    if (updated.livemode !== expectedLiveMode() || updated.id !== stored.endpointId || updated.url !== endpointUrl) {
+      throw new Error("Stripe did not confirm the saved webhook endpoint.");
     }
     if (await endpointIsReady(stored.endpointId, endpointUrl)) return;
   }
 
-  const key = createHash("sha256").update(`deallens-test-webhook:${endpointUrl}`).digest("hex");
+  const key = createHash("sha256").update(`deallens-${billingMode()}-webhook:${endpointUrl}`).digest("hex");
   const endpoint = await stripePost(
     "/v1/webhook_endpoints",
     webhookForm(endpointUrl),
-    `deallens-test-webhook-${key}`,
+    `deallens-${billingMode()}-webhook-${key}`,
   );
-  if (endpoint.livemode !== false
+  if (endpoint.livemode !== expectedLiveMode()
     || typeof endpoint.id !== "string"
     || endpoint.url !== endpointUrl
     || endpoint.status !== "enabled"
     || typeof endpoint.secret !== "string") {
-    throw new Error("Stripe did not return a verifiable enabled test webhook endpoint.");
+    throw new Error("Stripe did not return a verifiable enabled webhook endpoint.");
   }
 
   await storeStripeWebhookSecret(endpoint.id, endpointUrl, endpoint.secret);
@@ -92,7 +95,7 @@ async function ensureTestWebhook(endpointUrl: string): Promise<void> {
     || storedSecret.endpointUrl !== endpointUrl
     || storedSecret.secret !== endpoint.secret
     || !(await endpointIsReady(endpoint.id, endpointUrl))) {
-    throw new Error("The managed Stripe test webhook could not be verified after encrypted storage.");
+    throw new Error("The managed Stripe webhook could not be verified after encrypted storage.");
   }
 }
 
@@ -102,20 +105,20 @@ export async function initializeStripeBilling(): Promise<void> {
   setStripePeriodicReconciliationReady(false);
   setVerifiedTestPrices({});
 
-  if (process.env.STRIPE_BILLING_MODE !== "test") {
-    setStripeWebhookStatus(false, "Stripe billing is disabled: STRIPE_BILLING_MODE=test is required.");
-    logger.info("Stripe setup skipped: STRIPE_BILLING_MODE=test is required; live billing remains disabled.");
+  if (!billingMode()) {
+    setStripeWebhookStatus(false, "Stripe billing mode does not match this runtime environment.");
+    logger.info("Stripe setup skipped: billing mode does not match runtime environment.");
     return;
   }
 
   let proxyReady = false;
   try {
     const health = await stripeGet("/v1/prices?limit=1");
-    if (!Array.isArray(health.data)) throw new Error("Stripe test API did not return a price list.");
+    if (!Array.isArray(health.data)) throw new Error("Stripe API did not return a price list.");
     proxyReady = true;
   } catch {
-    setStripeWebhookStatus(false, "The authenticated Stripe test connector proxy is unavailable.");
-    logger.warn("Stripe test connector proxy is unavailable; billing remains disabled.");
+    setStripeWebhookStatus(false, "The Stripe connector for this billing environment is unavailable.");
+    logger.warn("Stripe connector proxy is unavailable; billing remains disabled.");
     return;
   }
 
@@ -147,34 +150,34 @@ export async function initializeStripeBilling(): Promise<void> {
   let webhookReady = false;
   const endpointUrl = configuredWebhookUrl();
   if (!allPricesVerified) {
-    setStripeWebhookStatus(false, "All three approved USD test prices/products must be verified before webhook provisioning.");
-    logger.warn("Stripe webhook provisioning skipped because all approved test prices and products were not verified.");
+    setStripeWebhookStatus(false, "All three approved USD prices and products must be verified before webhook provisioning.");
+    logger.warn("Stripe webhook provisioning skipped because approved prices and products were not verified.");
   } else if (endpointUrl) {
     try {
       await ensureTestWebhook(endpointUrl);
       webhookReady = true;
       setStripeWebhookStatus(true);
-      logger.info("Stripe test webhook endpoint and encrypted signing secret were verified.");
+      logger.info("Stripe webhook endpoint and encrypted signing secret were verified.");
     } catch {
       setStripeWebhookStatus(
         false,
         "Stripe webhook provisioning or verification is unavailable.",
       );
-      logger.warn("Stripe test webhook provisioning or verification failed; webhook delivery is not considered operational.");
+      logger.warn("Stripe webhook provisioning or verification failed; webhook delivery is not considered operational.");
     }
   } else {
     setStripeWebhookStatus(
       false,
       "No approved artifact host is configured for Stripe webhooks.",
     );
-    logger.warn("Stripe test webhook was not configured because no approved artifact host is available.");
+    logger.warn("Stripe webhook was not configured because no approved artifact host is available.");
   }
 
   setVerifiedTestPrices(verified);
   const ready = proxyReady && allPricesVerified && webhookReady;
   setStripeBillingReady(ready);
   if (ready) {
-    logger.info("Stripe test billing is ready: all approved prices, products, and the managed webhook are verified.");
+    logger.info({ mode: billingMode() }, "Stripe billing is ready: approved prices, products, and managed webhook verified.");
   } else {
     logger.info(
       { approvedTestPricesVerified: allPricesVerified, webhookReady, periodicReconciliationReady: periodicReady },

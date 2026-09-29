@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { AccountStatusBillingMode } from './accountStatusBillingMode';
 import type { AccountStatusTier } from './accountStatusTier';
 
 export interface AccountStatus {
@@ -15,5 +16,6 @@ export interface AccountStatus {
   aiLimit: number;
   resetsAt: string;
   billingEnabled: boolean;
+  billingMode: AccountStatusBillingMode;
   hasBillingCustomer: boolean;
 }

@@ -125,6 +125,15 @@ export const AccountStatusTier = {
   enterprise: 'enterprise',
 } as const;
 
+export type AccountStatusBillingMode = typeof AccountStatusBillingMode[keyof typeof AccountStatusBillingMode];
+
+
+export const AccountStatusBillingMode = {
+  test: 'test',
+  live: 'live',
+  unavailable: 'unavailable',
+} as const;
+
 export interface AccountStatus {
   tier: AccountStatusTier;
   screensUsed: number;
@@ -133,6 +142,7 @@ export interface AccountStatus {
   aiLimit: number;
   resetsAt: string;
   billingEnabled: boolean;
+  billingMode: AccountStatusBillingMode;
   hasBillingCustomer: boolean;
 }
 
@@ -220,7 +230,17 @@ export interface Plan {
   checkoutAvailable: boolean;
 }
 
+export type PlanCatalogBillingStatusMode = typeof PlanCatalogBillingStatusMode[keyof typeof PlanCatalogBillingStatusMode];
+
+
+export const PlanCatalogBillingStatusMode = {
+  test: 'test',
+  live: 'live',
+  unavailable: 'unavailable',
+} as const;
+
 export type PlanCatalogBillingStatus = {
+  mode: PlanCatalogBillingStatusMode;
   enabled: boolean;
   webhookVerified: boolean;
   periodicReconciliationVerified: boolean;

@@ -325,7 +325,7 @@ components:
         report: { $ref: "#/components/schemas/ScreenReport" }
     AccountStatus:
       type: object
-      required: [tier, screensUsed, screenLimit, aiUsed, aiLimit, resetsAt, billingEnabled, hasBillingCustomer]
+      required: [tier, screensUsed, screenLimit, aiUsed, aiLimit, resetsAt, billingEnabled, billingMode, hasBillingCustomer]
       properties:
         tier: { type: string, enum: [free, pro, team, enterprise] }
         screensUsed: { type: integer }
@@ -334,6 +334,7 @@ components:
         aiLimit: { type: integer }
         resetsAt: { type: string }
         billingEnabled: { type: boolean }
+        billingMode: { type: string, enum: [test, live, unavailable] }
         hasBillingCustomer: { type: boolean }
     CompilationInput:
       type: object
@@ -418,8 +419,9 @@ components:
           items: { $ref: "#/components/schemas/Plan" }
         billingStatus:
           type: object
-          required: [enabled, webhookVerified, periodicReconciliationVerified, limitation]
+          required: [mode, enabled, webhookVerified, periodicReconciliationVerified, limitation]
           properties:
+            mode: { type: string, enum: [test, live, unavailable] }
             enabled: { type: boolean }
             webhookVerified: { type: boolean }
             periodicReconciliationVerified: { type: boolean }

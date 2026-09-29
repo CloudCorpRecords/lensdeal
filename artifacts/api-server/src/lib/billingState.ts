@@ -40,8 +40,8 @@ export function stripeWebhookStatusNote(): string | null {
   if (stripeWebhookReady) return null;
   const reason = stripeWebhookLimitation ?? "Stripe webhook provisioning is not verified.";
   const fallback = stripePeriodicReconciliationReady
-    ? " Five-minute Stripe test-mode entitlement polling is currently verified; checkout remains disabled."
-    : " Periodic Stripe test-mode entitlement polling is not currently verified; checkout remains disabled.";
+    ? " Five-minute Stripe entitlement polling is currently verified; checkout remains disabled."
+    : " Periodic Stripe entitlement polling is not currently verified; checkout remains disabled.";
   return `${reason}${fallback}`;
 }
 
@@ -54,12 +54,32 @@ export function getVerifiedTestPrice(tier: "pro" | "team" | "enterprise"): Verif
 }
 
 export function approvedTestPrices(): Partial<Record<"pro" | "team" | "enterprise", string>> {
+  const prefix = billingMode() === "live" ? "STRIPE_APPROVED_LIVE_PRICE_ID_" : "STRIPE_APPROVED_TEST_PRICE_ID_";
+  const pro = process.env[`${prefix}PRO`]?.trim();
+  const team = process.env[`${prefix}TEAM`]?.trim();
+  const enterprise = process.env[`${prefix}ENTERPRISE`]?.trim();
   return {
-    ...(process.env.STRIPE_APPROVED_TEST_PRICE_ID_PRO?.trim()
-      ? { pro: process.env.STRIPE_APPROVED_TEST_PRICE_ID_PRO.trim() } : {}),
-    ...(process.env.STRIPE_APPROVED_TEST_PRICE_ID_TEAM?.trim()
-      ? { team: process.env.STRIPE_APPROVED_TEST_PRICE_ID_TEAM.trim() } : {}),
-    ...(process.env.STRIPE_APPROVED_TEST_PRICE_ID_ENTERPRISE?.trim()
-      ? { enterprise: process.env.STRIPE_APPROVED_TEST_PRICE_ID_ENTERPRISE.trim() } : {}),
+    ...(pro ? { pro } : {}),
+    ...(team ? { team } : {}),
+    ...(enterprise ? { enterprise } : {}),
   };
+}
+
+export type StripeBillingMode = "test" | "live";
+
+// Never allow live API calls in a development process, even if the mode variable is mistaken.
+export function billingMode(): StripeBillingMode | null {
+  if (process.env.STRIPE_BILLING_MODE === "live"
+    && process.env.REPLIT_DEPLOYMENT === "1"
+    && process.env.NODE_ENV === "production") return "live";
+  if (process.env.STRIPE_BILLING_MODE === "test"
+    && process.env.REPLIT_DEPLOYMENT !== "1"
+    && process.env.NODE_ENV !== "production") return "test";
+  return null;
+}
+
+export function expectedLiveMode(): boolean {
+  const mode = billingMode();
+  if (!mode) throw new Error("Stripe billing mode does not match the runtime environment.");
+  return mode === "live";
 }

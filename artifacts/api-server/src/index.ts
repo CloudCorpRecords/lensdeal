@@ -26,5 +26,5 @@ app.listen(port, (err) => {
 });
 
 void initializeStripeBilling().catch(() => {
-  logger.warn("Stripe test billing initialization failed unexpectedly; API remains available with billing disabled.");
+  logger.warn("Stripe billing initialization failed unexpectedly; API remains available with billing disabled.");
 });

@@ -1,4 +1,5 @@
 import { ReplitConnectors } from "@replit/connectors-sdk";
+import { expectedLiveMode } from "./billingState";
 
 export type StripeObject = Record<string, unknown>;
 
@@ -14,17 +15,17 @@ export class StripeProxyError extends Error {
 
 const connectors = new ReplitConnectors();
 
-function rejectLiveObjects(value: unknown): void {
+function rejectWrongModeObjects(value: unknown, live: boolean): void {
   if (Array.isArray(value)) {
-    for (const item of value) rejectLiveObjects(item);
+    for (const item of value) rejectWrongModeObjects(item, live);
     return;
   }
   if (!value || typeof value !== "object") return;
   const object = value as Record<string, unknown>;
-  if (object.livemode === true) {
-    throw new StripeProxyError("Live-mode Stripe objects are disabled.");
+  if (typeof object.livemode === "boolean" && object.livemode !== live) {
+    throw new StripeProxyError("Stripe returned an object from the wrong billing environment.");
   }
-  for (const child of Object.values(object)) rejectLiveObjects(child);
+  for (const child of Object.values(object)) rejectWrongModeObjects(child, live);
 }
 
 function errorCode(value: unknown): string | undefined {
@@ -37,9 +38,20 @@ function errorCode(value: unknown): string | undefined {
 }
 
 export function requireTestBillingMode(): void {
-  if (process.env.STRIPE_BILLING_MODE !== "test") {
-    throw new StripeProxyError("Stripe calls are disabled unless STRIPE_BILLING_MODE=test.");
+  expectedLiveMode();
+}
+
+async function connectionIdForEnvironment(): Promise<string> {
+  const environment = expectedLiveMode() ? "production" : "development";
+  const connections = await connectors.listConnections({ connector_names: "stripe" });
+  const matches = connections.filter((connection) =>
+    connection.environment === environment
+    && connection.status === "healthy"
+    && connection.connector?.name === "stripe");
+  if (matches.length !== 1 || typeof matches[0].id !== "string") {
+    throw new StripeProxyError(`Exactly one healthy ${environment} Stripe connection is required.`);
   }
+  return matches[0].id;
 }
 
 export async function stripeGet<T extends StripeObject = StripeObject>(path: string): Promise<T> {
@@ -60,23 +72,22 @@ async function stripeRequest<T extends StripeObject>(
   body?: URLSearchParams,
   idempotencyKey?: string,
 ): Promise<T> {
-  requireTestBillingMode();
+  const live = expectedLiveMode();
   if (!path.startsWith("/") || path.startsWith("//")) {
     throw new StripeProxyError("Stripe API paths must be relative to the connected Stripe API.");
   }
 
   let response: Response;
   try {
+    const connectionId = await connectionIdForEnvironment();
     response = await connectors.proxy("stripe", path, {
       method,
-      ...(body ? {
-        body,
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      } : {}),
-      ...(idempotencyKey ? { headers: {
+      ...(body ? { body } : {}),
+      headers: {
+        "Connection-Id": connectionId,
         ...(body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
-        "Idempotency-Key": idempotencyKey,
-      } } : {}),
+        ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+      },
     });
   } catch {
     throw new StripeProxyError("The authenticated Stripe connector proxy is unavailable.");
@@ -90,12 +101,12 @@ async function stripeRequest<T extends StripeObject>(
   }
   if (!response.ok) {
     throw new StripeProxyError(
-      "The Stripe test API request failed.",
+      "The Stripe API request failed.",
       response.status,
       errorCode(result),
     );
   }
-  rejectLiveObjects(result);
+  rejectWrongModeObjects(result, live);
   if (!result || typeof result !== "object" || Array.isArray(result)) {
     throw new StripeProxyError("Stripe returned an invalid API object.", response.status);
   }

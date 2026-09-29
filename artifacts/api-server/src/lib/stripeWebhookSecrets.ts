@@ -1,9 +1,14 @@
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, stripeWebhookSecrets } from "@workspace/db";
+import { billingMode } from "./billingState";
 
-const CONFIG_ID = "stripe-test";
 const KEY_DERIVATION_SALT = "deallens-stripe-webhook-signing-secret-v1";
+function configId(): string {
+  const mode = billingMode();
+  if (!mode) throw new Error("Stripe billing environment is not configured.");
+  return `stripe-${mode}`;
+}
 
 type EncryptedSecret = {
   ciphertext: string;
@@ -57,7 +62,7 @@ export async function storeStripeWebhookSecret(
   if (!secret.startsWith("whsec_")) throw new Error("Stripe returned an invalid webhook signing secret.");
   const encrypted = encryptSecret(secret);
   await db.insert(stripeWebhookSecrets).values({
-    id: CONFIG_ID,
+    id: configId(),
     endpointId,
     endpointUrl,
     ...encrypted,
@@ -75,7 +80,7 @@ export async function storeStripeWebhookSecret(
 
 export async function getStripeWebhookSecret(): Promise<StoredWebhookSecret | null> {
   const [stored] = await db.select().from(stripeWebhookSecrets)
-    .where(eq(stripeWebhookSecrets.id, CONFIG_ID))
+    .where(eq(stripeWebhookSecrets.id, configId()))
     .limit(1);
   if (!stored) return null;
   try {

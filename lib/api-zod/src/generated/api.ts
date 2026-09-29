@@ -151,6 +151,7 @@ export const GetAccountResponse = zod.object({
   "aiLimit": zod.number().int(),
   "resetsAt": zod.string(),
   "billingEnabled": zod.boolean(),
+  "billingMode": zod.enum(['test', 'live', 'unavailable']),
   "hasBillingCustomer": zod.boolean()
 })
 
@@ -618,6 +619,7 @@ export const ListPlansResponse = zod.object({
   "checkoutAvailable": zod.boolean()
 })),
   "billingStatus": zod.object({
+  "mode": zod.enum(['test', 'live', 'unavailable']),
   "enabled": zod.boolean(),
   "webhookVerified": zod.boolean(),
   "periodicReconciliationVerified": zod.boolean(),
