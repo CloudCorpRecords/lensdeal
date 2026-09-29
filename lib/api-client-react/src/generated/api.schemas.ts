@@ -19,7 +19,17 @@ export interface ScreenInput {
      * @minLength 4
      * @maxLength 253
      */
-  comparisonDomain: string;
+  comparisonDomain?: string;
+  /**
+     * @items.minLength 4
+     * @items.maxLength 253
+     */
+  comparisonDomains?: string[];
+  /**
+     * @minLength 8
+     * @maxLength 100
+     */
+  requestId: string;
 }
 
 export interface TimePoint {
@@ -85,13 +95,144 @@ export interface Finding {
 
 export interface ScreenReport {
   generatedAt: string;
+  id?: string;
   period: string;
   sourceNotice: string;
   target: DomainProfile;
   comparison: DomainProfile;
+  additionalProfiles?: DomainProfile[];
   findings: Finding[];
   summary: string;
   sellerQuestions: string[];
   limitations: string[];
+}
+
+export interface SavedScreen {
+  id: string;
+  createdAt: string;
+  targetDomain: string;
+  comparisonDomains: string[];
+  report: ScreenReport;
+}
+
+export type AccountStatusTier = typeof AccountStatusTier[keyof typeof AccountStatusTier];
+
+
+export const AccountStatusTier = {
+  free: 'free',
+  pro: 'pro',
+  team: 'team',
+  enterprise: 'enterprise',
+} as const;
+
+export interface AccountStatus {
+  tier: AccountStatusTier;
+  screensUsed: number;
+  screenLimit: number;
+  aiUsed: number;
+  aiLimit: number;
+  resetsAt: string;
+  billingEnabled: boolean;
+}
+
+export interface CompilationInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  title: string;
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
+  screenIds: string[];
+}
+
+export interface Compilation {
+  id: string;
+  title: string;
+  screenIds: string[];
+  summary: string;
+  createdAt: string;
+}
+
+export interface CompilationDetail {
+  id: string;
+  title: string;
+  screenIds: string[];
+  summary: string;
+  createdAt: string;
+  screens: SavedScreen[];
+}
+
+export interface ExplanationInput {
+  screenId: string;
+  /**
+     * @minLength 5
+     * @maxLength 800
+     */
+  question: string;
+  /**
+     * @minLength 8
+     * @maxLength 100
+     */
+  requestId: string;
+}
+
+export interface Citation {
+  label: string;
+  url: string;
+  period: string;
+  retrievedAt: string;
+}
+
+export interface Explanation {
+  id: string;
+  screenId: string;
+  question: string;
+  answer: string;
+  citations: Citation[];
+  createdAt: string;
+}
+
+export type PlanTier = typeof PlanTier[keyof typeof PlanTier];
+
+
+export const PlanTier = {
+  free: 'free',
+  pro: 'pro',
+  team: 'team',
+  enterprise: 'enterprise',
+} as const;
+
+export interface Plan {
+  tier: PlanTier;
+  name: string;
+  monthlyPrice: number;
+  screenLimit: number;
+  aiLimit: number;
+  checkoutAvailable: boolean;
+}
+
+export interface PlanCatalog {
+  plans: Plan[];
+  note: string;
+}
+
+export type CheckoutInputTier = typeof CheckoutInputTier[keyof typeof CheckoutInputTier];
+
+
+export const CheckoutInputTier = {
+  pro: 'pro',
+  team: 'team',
+  enterprise: 'enterprise',
+} as const;
+
+export interface CheckoutInput {
+  tier: CheckoutInputTier;
+}
+
+export interface BillingLink {
+  url: string;
 }
 

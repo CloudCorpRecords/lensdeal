@@ -28,12 +28,60 @@ const API = "https://api.similarweb.com/v5/website-analysis/websites";
 const TRAFFIC_DOC = "https://docs.similarweb.com/api-v5/api-reference/website-analysis-api/website-performance/traffic-and-engagement";
 const CHANNEL_DOC = "https://docs.similarweb.com/api-v5/api-reference/website-analysis-api/marketing-channels/marketing-channels-new";
 const GEO_DOC = "https://docs.similarweb.com/api-v5/api-reference/website-analysis-api/website-performance/traffic-geography";
+const domainPattern = /^(?=.{4,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i;
 
 export class ProviderError extends Error {
-  constructor(public provider: string, message: string) {
+  provider: string;
+
+  constructor(provider: string, message: string) {
     super(message);
+    this.provider = provider;
   }
 }
+
+export class Semaphore {
+  private active = 0;
+  private readonly waiters: Array<() => void> = [];
+
+  async acquire(): Promise<() => void> {
+    const configuredLimit = Number(process.env.DEALLENS_SIMILARWEB_MAX_CONCURRENCY);
+    const limit = Number.isFinite(configuredLimit) && configuredLimit > 0
+      ? Math.max(1, Math.min(16, Math.floor(configuredLimit)))
+      : 6;
+    const configuredQueue = Number(process.env.DEALLENS_SIMILARWEB_MAX_QUEUE);
+    const queueLimit = Number.isFinite(configuredQueue) && configuredQueue >= 0
+      ? Math.min(128, Math.floor(configuredQueue))
+      : 48;
+    if (this.active < limit) {
+      this.active += 1;
+    } else {
+      if (this.waiters.length >= queueLimit) {
+        throw new ProviderError("Similarweb", "The global provider request budget is currently full; retry shortly.");
+      }
+      await new Promise<void>((resolve) => this.waiters.push(resolve));
+    }
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      const next = this.waiters.shift();
+      if (next) next();
+      else this.active = Math.max(0, this.active - 1);
+    };
+  }
+}
+
+const similarwebSemaphore = new Semaphore();
+
+export type FreshTrafficEstimate = {
+  domain: string;
+  metric: "Estimated monthly visits";
+  visits: number;
+  period: string;
+  source: "Fresh Similarweb traffic-and-engagement estimate";
+  sourceUrl: string;
+  retrievedAt: string;
+};
 
 function monthOffset(offset: number): string {
   const now = new Date();
@@ -66,27 +114,76 @@ async function similarweb(path: string, domain: string, params: Record<string, s
   for (const [name, value] of Object.entries({ domain, format: "json", ...params })) {
     url.searchParams.set(name, value);
   }
-  let response: Response;
+  const release = await similarwebSemaphore.acquire();
   try {
-    response = await fetch(url, { headers: { "api-key": key }, signal: AbortSignal.timeout(15000) });
-  } catch {
-    throw new ProviderError("Similarweb", "The request timed out or the provider is unreachable.");
-  }
-  if (!response.ok) {
-    const body = await response.text();
-    let message = `HTTP ${response.status}`;
+    let response: Response;
     try {
-      const parsed = JSON.parse(body) as { message?: string; error?: string; meta?: { error_message?: string } };
-      message += `: ${(parsed.meta?.error_message || parsed.message || parsed.error || "check API entitlement and query parameters").slice(0, 180)}`;
+      response = await fetch(url, {
+        headers: { "api-key": key },
+        signal: AbortSignal.timeout(12000),
+      });
     } catch {
-      message += ": check API entitlement and query parameters";
+      throw new ProviderError("Similarweb", "The request timed out or the provider is unreachable.");
     }
-    throw new ProviderError("Similarweb", message);
+    if (!response.ok) {
+      let body: string;
+      try {
+        body = await response.text();
+      } catch {
+        throw new ProviderError("Similarweb", "The provider failed while returning traffic data.");
+      }
+      let message = `HTTP ${response.status}`;
+      try {
+        const parsed = JSON.parse(body) as { message?: string; error?: string; meta?: { error_message?: string } };
+        message += `: ${(parsed.meta?.error_message || parsed.message || parsed.error || "check API entitlement and query parameters").slice(0, 180)}`;
+      } catch {
+        message += ": check API entitlement and query parameters";
+      }
+      throw new ProviderError("Similarweb", message);
+    }
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      throw new ProviderError("Similarweb", `${path} returned an invalid JSON response.`);
+    }
+    return rows(payload, path);
+  } finally {
+    release();
   }
-  return rows(await response.json(), path);
 }
 
-async function profile(domain: string, start: string, end: string): Promise<DomainProfile> {
+export async function fetchFreshTrafficEstimate(domain: string): Promise<FreshTrafficEstimate> {
+  if (!domainPattern.test(domain)) {
+    throw new ProviderError("Similarweb", "The saved target domain is invalid for a fresh lookup.");
+  }
+  const month = monthOffset(1);
+  const traffic = await similarweb("/traffic-and-engagement", domain, {
+    start_date: month,
+    end_date: month,
+    granularity: "monthly",
+    web_source: "total",
+    country: "ww",
+    metrics: "visits",
+  });
+  const point = traffic.find((row) =>
+    String(row.date ?? "").slice(0, 7) === month && number(row.visits) !== null);
+  const visits = number(point?.visits);
+  if (visits === null) {
+    throw new ProviderError("Similarweb", `No current monthly visits estimate was available for ${domain} (${month}).`);
+  }
+  return {
+    domain,
+    metric: "Estimated monthly visits",
+    visits,
+    period: `${month} (one month, worldwide, all web)`,
+    source: "Fresh Similarweb traffic-and-engagement estimate",
+    sourceUrl: TRAFFIC_DOC,
+    retrievedAt: new Date().toISOString(),
+  };
+}
+
+export async function fetchProfile(domain: string, start: string, end: string): Promise<DomainProfile> {
   const common = {
     start_date: start,
     end_date: end,
@@ -238,5 +335,5 @@ export function screenPeriod(): { start: string; end: string; label: string } {
 }
 
 export async function fetchProfiles(target: string, comparison: string, start: string, end: string) {
-  return Promise.all([profile(target, start, end), profile(comparison, start, end)]);
+  return Promise.all([fetchProfile(target, start, end), fetchProfile(comparison, start, end)]);
 }

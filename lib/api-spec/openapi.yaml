@@ -49,6 +49,174 @@ paths:
           description: Invalid domains
         "502":
           description: Provider request failed or access is insufficient
+  /account:
+    get:
+      operationId: getAccount
+      tags: [screener]
+      summary: Current account, entitlements and monthly usage
+      responses:
+        "200":
+          description: Current usage
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountStatus" }
+  /screens:
+    get:
+      operationId: listScreens
+      tags: [screener]
+      summary: List my completed screens
+      responses:
+        "200":
+          description: Personal screen history
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SavedScreen" }
+  /screens/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getScreen
+      tags: [screener]
+      summary: Retrieve one of my saved screens
+      responses:
+        "200":
+          description: Saved screen
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SavedScreen" }
+    delete:
+      operationId: deleteScreen
+      tags: [screener]
+      summary: Delete one of my saved screens
+      responses:
+        "204": { description: Deleted }
+  /compilations:
+    get:
+      operationId: listCompilations
+      tags: [screener]
+      summary: List my research compilations
+      responses:
+        "200":
+          description: Compilations
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Compilation" }
+    post:
+      operationId: createCompilation
+      tags: [screener]
+      summary: Group selected saved screens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CompilationInput" }
+      responses:
+        "201":
+          description: Saved compilation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Compilation" }
+  /compilations/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getCompilation
+      tags: [screener]
+      summary: Retrieve compilation and included screens
+      responses:
+        "200":
+          description: Compilation detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CompilationDetail" }
+    delete:
+      operationId: deleteCompilation
+      tags: [screener]
+      summary: Delete a compilation
+      responses:
+        "204": { description: Deleted }
+  /explanations:
+    post:
+      operationId: createExplanation
+      tags: [screener]
+      summary: Ask an evidence-grounded question about a saved screen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ExplanationInput" }
+      responses:
+        "200":
+          description: Cited answer
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Explanation" }
+  /screens/{id}/explanations:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    get:
+      operationId: listExplanations
+      tags: [screener]
+      summary: My AI questions for a saved screen
+      responses:
+        "200":
+          description: Question history
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Explanation" }
+  /billing/plans:
+    get:
+      operationId: listPlans
+      tags: [screener]
+      summary: Available subscription tiers
+      responses:
+        "200":
+          description: Plans and checkout availability
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlanCatalog" }
+  /billing/checkout:
+    post:
+      operationId: createCheckout
+      tags: [screener]
+      summary: Begin a test-mode or approved live subscription upgrade
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CheckoutInput" }
+      responses:
+        "200":
+          description: Hosted checkout
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BillingLink" }
+  /billing/portal:
+    post:
+      operationId: createPortal
+      tags: [screener]
+      summary: Manage current subscription
+      responses:
+        "200":
+          description: Hosted billing portal
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BillingLink" }
 components:
   schemas:
     HealthStatus:
@@ -61,10 +229,14 @@ components:
     ScreenInput:
       type: object
       additionalProperties: false
-      required: [targetDomain, comparisonDomain]
+      required: [targetDomain, requestId]
       properties:
         targetDomain: { type: string, minLength: 4, maxLength: 253 }
         comparisonDomain: { type: string, minLength: 4, maxLength: 253 }
+        comparisonDomains:
+          type: array
+          items: { type: string, minLength: 4, maxLength: 253 }
+        requestId: { type: string, minLength: 8, maxLength: 100 }
     TimePoint:
       type: object
       required: [month, visits]
@@ -122,10 +294,14 @@ components:
       required: [generatedAt, period, sourceNotice, target, comparison, findings, summary, sellerQuestions, limitations]
       properties:
         generatedAt: { type: string }
+        id: { type: string }
         period: { type: string }
         sourceNotice: { type: string }
         target: { $ref: "#/components/schemas/DomainProfile" }
         comparison: { $ref: "#/components/schemas/DomainProfile" }
+        additionalProfiles:
+          type: array
+          items: { $ref: "#/components/schemas/DomainProfile" }
         findings:
           type: array
           items: { $ref: "#/components/schemas/Finding" }
@@ -136,4 +312,116 @@ components:
         limitations:
           type: array
           items: { type: string }
+    SavedScreen:
+      type: object
+      required: [id, createdAt, targetDomain, comparisonDomains, report]
+      properties:
+        id: { type: string }
+        createdAt: { type: string }
+        targetDomain: { type: string }
+        comparisonDomains:
+          type: array
+          items: { type: string }
+        report: { $ref: "#/components/schemas/ScreenReport" }
+    AccountStatus:
+      type: object
+      required: [tier, screensUsed, screenLimit, aiUsed, aiLimit, resetsAt, billingEnabled]
+      properties:
+        tier: { type: string, enum: [free, pro, team, enterprise] }
+        screensUsed: { type: integer }
+        screenLimit: { type: integer }
+        aiUsed: { type: integer }
+        aiLimit: { type: integer }
+        resetsAt: { type: string }
+        billingEnabled: { type: boolean }
+    CompilationInput:
+      type: object
+      required: [title, screenIds]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 120 }
+        screenIds:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { type: string }
+    Compilation:
+      type: object
+      required: [id, title, screenIds, summary, createdAt]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        screenIds:
+          type: array
+          items: { type: string }
+        summary: { type: string }
+        createdAt: { type: string }
+    CompilationDetail:
+      type: object
+      required: [id, title, screenIds, summary, createdAt, screens]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        screenIds:
+          type: array
+          items: { type: string }
+        summary: { type: string }
+        createdAt: { type: string }
+        screens:
+          type: array
+          items: { $ref: "#/components/schemas/SavedScreen" }
+    ExplanationInput:
+      type: object
+      required: [screenId, question, requestId]
+      properties:
+        screenId: { type: string }
+        question: { type: string, minLength: 5, maxLength: 800 }
+        requestId: { type: string, minLength: 8, maxLength: 100 }
+    Citation:
+      type: object
+      required: [label, url, period, retrievedAt]
+      properties:
+        label: { type: string }
+        url: { type: string }
+        period: { type: string }
+        retrievedAt: { type: string }
+    Explanation:
+      type: object
+      required: [id, screenId, question, answer, citations, createdAt]
+      properties:
+        id: { type: string }
+        screenId: { type: string }
+        question: { type: string }
+        answer: { type: string }
+        citations:
+          type: array
+          items: { $ref: "#/components/schemas/Citation" }
+        createdAt: { type: string }
+    Plan:
+      type: object
+      required: [tier, name, monthlyPrice, screenLimit, aiLimit, checkoutAvailable]
+      properties:
+        tier: { type: string, enum: [free, pro, team, enterprise] }
+        name: { type: string }
+        monthlyPrice: { type: integer }
+        screenLimit: { type: integer }
+        aiLimit: { type: integer }
+        checkoutAvailable: { type: boolean }
+    PlanCatalog:
+      type: object
+      required: [plans, note]
+      properties:
+        plans:
+          type: array
+          items: { $ref: "#/components/schemas/Plan" }
+        note: { type: string }
+    CheckoutInput:
+      type: object
+      required: [tier]
+      properties:
+        tier: { type: string, enum: [pro, team, enterprise] }
+    BillingLink:
+      type: object
+      required: [url]
+      properties:
+        url: { type: string }
 

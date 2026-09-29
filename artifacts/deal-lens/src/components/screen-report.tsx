@@ -137,14 +137,14 @@ export function ScreenReport({ report }: { report: ScreenReportType }) {
               </tbody>
             </table>
           </div>
-          <aside className="panel panel-pad brief-panel"><span className="eyebrow">Crusoe narrative</span><h3>What the evidence suggests.</h3><p data-testid="text-summary">{report.summary || 'No narrative was returned for this screen.'}</p></aside>
+          <aside className="panel panel-pad brief-panel"><span className="eyebrow">Research readout</span><h3>What the evidence suggests.</h3><p data-testid="text-summary">{report.summary || 'No narrative was returned for this screen.'}</p></aside>
         </div>
         <p className="source-notice"><Info size={15} />{report.sourceNotice}</p>
       </section>
 
       <section id="panel-profiles" role="tabpanel" aria-label="Traffic profiles" className="report-section" style={{ display: activeTab === 'profiles' ? 'block' : 'none' }}>
         <div className="section-title"><h3>Traffic profiles</h3><small>Reported period · {report.period}</small></div>
-        <div className="profile-grid"><Profile profile={report.target} label="01 / TARGET DOMAIN" /><Profile profile={report.comparison} label="02 / COMPARISON DOMAIN" compare /></div>
+        <div className="profile-grid"><Profile profile={report.target} label="01 / TARGET DOMAIN" /><Profile profile={report.comparison} label="02 / COMPARISON DOMAIN" compare />{report.additionalProfiles?.map((profile, index) => <Profile key={`${profile.domain}-${index}`} profile={profile} label={`${String(index + 3).padStart(2, '0')} / ADDITIONAL COMPARISON`} compare />)}</div>
         <p className="source-notice"><Info size={15} />{report.sourceNotice}</p>
       </section>
 

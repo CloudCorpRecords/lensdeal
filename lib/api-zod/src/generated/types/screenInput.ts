@@ -16,5 +16,15 @@ export interface ScreenInput {
      * @minLength 4
      * @maxLength 253
      */
-  comparisonDomain: string;
+  comparisonDomain?: string;
+  /**
+     * @items.minLength 4
+     * @items.maxLength 253
+     */
+  comparisonDomains?: string[];
+  /**
+     * @minLength 8
+     * @maxLength 100
+     */
+  requestId: string;
 }

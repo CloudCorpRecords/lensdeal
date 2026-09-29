@@ -10,10 +10,12 @@ import type { Finding } from './finding';
 
 export interface ScreenReport {
   generatedAt: string;
+  id?: string;
   period: string;
   sourceNotice: string;
   target: DomainProfile;
   comparison: DomainProfile;
+  additionalProfiles?: DomainProfile[];
   findings: Finding[];
   summary: string;
   sellerQuestions: string[];

@@ -27,15 +27,24 @@ export const createScreenBodyTargetDomainMax = 253;
 export const createScreenBodyComparisonDomainMin = 4;
 export const createScreenBodyComparisonDomainMax = 253;
 
+export const createScreenBodyComparisonDomainsItemMin = 4;
+export const createScreenBodyComparisonDomainsItemMax = 253;
+
+export const createScreenBodyRequestIdMin = 8;
+export const createScreenBodyRequestIdMax = 100;
+
 
 
 export const CreateScreenBody = zod.object({
   "targetDomain": zod.string().min(createScreenBodyTargetDomainMin).max(createScreenBodyTargetDomainMax),
-  "comparisonDomain": zod.string().min(createScreenBodyComparisonDomainMin).max(createScreenBodyComparisonDomainMax)
+  "comparisonDomain": zod.string().min(createScreenBodyComparisonDomainMin).max(createScreenBodyComparisonDomainMax).optional(),
+  "comparisonDomains": zod.array(zod.string().min(createScreenBodyComparisonDomainsItemMin).max(createScreenBodyComparisonDomainsItemMax)).optional(),
+  "requestId": zod.string().min(createScreenBodyRequestIdMin).max(createScreenBodyRequestIdMax)
 })
 
 export const CreateScreenResponse = zod.object({
   "generatedAt": zod.string(),
+  "id": zod.string().optional(),
   "period": zod.string(),
   "sourceNotice": zod.string(),
   "target": zod.object({
@@ -88,6 +97,31 @@ export const CreateScreenResponse = zod.object({
   "share": zod.number().optional()
 }).nullable()
 }),
+  "additionalProfiles": zod.array(zod.object({
+  "domain": zod.string(),
+  "monthlyVisits": zod.array(zod.object({
+  "month": zod.string(),
+  "visits": zod.number()
+})),
+  "averageVisits": zod.number(),
+  "trafficChangePercent": zod.number().nullable(),
+  "channels": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "geography": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "topCountry": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable(),
+  "topChannel": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable()
+})).optional(),
   "findings": zod.array(zod.object({
   "id": zod.string(),
   "severity": zod.enum(['watch', 'context']),
@@ -103,6 +137,504 @@ export const CreateScreenResponse = zod.object({
   "summary": zod.string(),
   "sellerQuestions": zod.array(zod.string()),
   "limitations": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Current account, entitlements and monthly usage
+ */
+export const GetAccountResponse = zod.object({
+  "tier": zod.enum(['free', 'pro', 'team', 'enterprise']),
+  "screensUsed": zod.number().int(),
+  "screenLimit": zod.number().int(),
+  "aiUsed": zod.number().int(),
+  "aiLimit": zod.number().int(),
+  "resetsAt": zod.string(),
+  "billingEnabled": zod.boolean()
+})
+
+
+/**
+ * @summary List my completed screens
+ */
+export const ListScreensResponseItem = zod.object({
+  "id": zod.string(),
+  "createdAt": zod.string(),
+  "targetDomain": zod.string(),
+  "comparisonDomains": zod.array(zod.string()),
+  "report": zod.object({
+  "generatedAt": zod.string(),
+  "id": zod.string().optional(),
+  "period": zod.string(),
+  "sourceNotice": zod.string(),
+  "target": zod.object({
+  "domain": zod.string(),
+  "monthlyVisits": zod.array(zod.object({
+  "month": zod.string(),
+  "visits": zod.number()
+})),
+  "averageVisits": zod.number(),
+  "trafficChangePercent": zod.number().nullable(),
+  "channels": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "geography": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "topCountry": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable(),
+  "topChannel": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable()
+}),
+  "comparison": zod.object({
+  "domain": zod.string(),
+  "monthlyVisits": zod.array(zod.object({
+  "month": zod.string(),
+  "visits": zod.number()
+})),
+  "averageVisits": zod.number(),
+  "trafficChangePercent": zod.number().nullable(),
+  "channels": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "geography": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "topCountry": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable(),
+  "topChannel": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable()
+}),
+  "additionalProfiles": zod.array(zod.object({
+  "domain": zod.string(),
+  "monthlyVisits": zod.array(zod.object({
+  "month": zod.string(),
+  "visits": zod.number()
+})),
+  "averageVisits": zod.number(),
+  "trafficChangePercent": zod.number().nullable(),
+  "channels": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "geography": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "topCountry": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable(),
+  "topChannel": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable()
+})).optional(),
+  "findings": zod.array(zod.object({
+  "id": zod.string(),
+  "severity": zod.enum(['watch', 'context']),
+  "title": zod.string(),
+  "metric": zod.string(),
+  "value": zod.string(),
+  "period": zod.string(),
+  "source": zod.string(),
+  "sourceUrl": zod.string(),
+  "whyItMatters": zod.string(),
+  "verificationQuestion": zod.string()
+})),
+  "summary": zod.string(),
+  "sellerQuestions": zod.array(zod.string()),
+  "limitations": zod.array(zod.string())
+})
+})
+export const ListScreensResponse = zod.array(ListScreensResponseItem)
+
+
+/**
+ * @summary Retrieve one of my saved screens
+ */
+export const GetScreenParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetScreenResponse = zod.object({
+  "id": zod.string(),
+  "createdAt": zod.string(),
+  "targetDomain": zod.string(),
+  "comparisonDomains": zod.array(zod.string()),
+  "report": zod.object({
+  "generatedAt": zod.string(),
+  "id": zod.string().optional(),
+  "period": zod.string(),
+  "sourceNotice": zod.string(),
+  "target": zod.object({
+  "domain": zod.string(),
+  "monthlyVisits": zod.array(zod.object({
+  "month": zod.string(),
+  "visits": zod.number()
+})),
+  "averageVisits": zod.number(),
+  "trafficChangePercent": zod.number().nullable(),
+  "channels": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "geography": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "topCountry": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable(),
+  "topChannel": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable()
+}),
+  "comparison": zod.object({
+  "domain": zod.string(),
+  "monthlyVisits": zod.array(zod.object({
+  "month": zod.string(),
+  "visits": zod.number()
+})),
+  "averageVisits": zod.number(),
+  "trafficChangePercent": zod.number().nullable(),
+  "channels": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "geography": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "topCountry": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable(),
+  "topChannel": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable()
+}),
+  "additionalProfiles": zod.array(zod.object({
+  "domain": zod.string(),
+  "monthlyVisits": zod.array(zod.object({
+  "month": zod.string(),
+  "visits": zod.number()
+})),
+  "averageVisits": zod.number(),
+  "trafficChangePercent": zod.number().nullable(),
+  "channels": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "geography": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "topCountry": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable(),
+  "topChannel": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable()
+})).optional(),
+  "findings": zod.array(zod.object({
+  "id": zod.string(),
+  "severity": zod.enum(['watch', 'context']),
+  "title": zod.string(),
+  "metric": zod.string(),
+  "value": zod.string(),
+  "period": zod.string(),
+  "source": zod.string(),
+  "sourceUrl": zod.string(),
+  "whyItMatters": zod.string(),
+  "verificationQuestion": zod.string()
+})),
+  "summary": zod.string(),
+  "sellerQuestions": zod.array(zod.string()),
+  "limitations": zod.array(zod.string())
+})
+})
+
+
+/**
+ * @summary Delete one of my saved screens
+ */
+export const DeleteScreenParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteScreenResponse = zod.void()
+
+
+/**
+ * @summary List my research compilations
+ */
+export const ListCompilationsResponseItem = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "screenIds": zod.array(zod.string()),
+  "summary": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListCompilationsResponse = zod.array(ListCompilationsResponseItem)
+
+
+/**
+ * @summary Group selected saved screens
+ */
+export const createCompilationBodyTitleMax = 120;
+
+export const createCompilationBodyScreenIdsMax = 100;
+
+
+
+export const CreateCompilationBody = zod.object({
+  "title": zod.string().min(1).max(createCompilationBodyTitleMax),
+  "screenIds": zod.array(zod.string()).min(1).max(createCompilationBodyScreenIdsMax)
+})
+
+export const CreateCompilationResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "screenIds": zod.array(zod.string()),
+  "summary": zod.string(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Retrieve compilation and included screens
+ */
+export const GetCompilationParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetCompilationResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "screenIds": zod.array(zod.string()),
+  "summary": zod.string(),
+  "createdAt": zod.string(),
+  "screens": zod.array(zod.object({
+  "id": zod.string(),
+  "createdAt": zod.string(),
+  "targetDomain": zod.string(),
+  "comparisonDomains": zod.array(zod.string()),
+  "report": zod.object({
+  "generatedAt": zod.string(),
+  "id": zod.string().optional(),
+  "period": zod.string(),
+  "sourceNotice": zod.string(),
+  "target": zod.object({
+  "domain": zod.string(),
+  "monthlyVisits": zod.array(zod.object({
+  "month": zod.string(),
+  "visits": zod.number()
+})),
+  "averageVisits": zod.number(),
+  "trafficChangePercent": zod.number().nullable(),
+  "channels": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "geography": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "topCountry": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable(),
+  "topChannel": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable()
+}),
+  "comparison": zod.object({
+  "domain": zod.string(),
+  "monthlyVisits": zod.array(zod.object({
+  "month": zod.string(),
+  "visits": zod.number()
+})),
+  "averageVisits": zod.number(),
+  "trafficChangePercent": zod.number().nullable(),
+  "channels": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "geography": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "topCountry": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable(),
+  "topChannel": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable()
+}),
+  "additionalProfiles": zod.array(zod.object({
+  "domain": zod.string(),
+  "monthlyVisits": zod.array(zod.object({
+  "month": zod.string(),
+  "visits": zod.number()
+})),
+  "averageVisits": zod.number(),
+  "trafficChangePercent": zod.number().nullable(),
+  "channels": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "geography": zod.array(zod.object({
+  "label": zod.string(),
+  "share": zod.number()
+})),
+  "topCountry": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable(),
+  "topChannel": zod.object({
+  "label": zod.string().optional(),
+  "share": zod.number().optional()
+}).nullable()
+})).optional(),
+  "findings": zod.array(zod.object({
+  "id": zod.string(),
+  "severity": zod.enum(['watch', 'context']),
+  "title": zod.string(),
+  "metric": zod.string(),
+  "value": zod.string(),
+  "period": zod.string(),
+  "source": zod.string(),
+  "sourceUrl": zod.string(),
+  "whyItMatters": zod.string(),
+  "verificationQuestion": zod.string()
+})),
+  "summary": zod.string(),
+  "sellerQuestions": zod.array(zod.string()),
+  "limitations": zod.array(zod.string())
+})
+}))
+})
+
+
+/**
+ * @summary Delete a compilation
+ */
+export const DeleteCompilationParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteCompilationResponse = zod.void()
+
+
+/**
+ * @summary Ask an evidence-grounded question about a saved screen
+ */
+export const createExplanationBodyQuestionMin = 5;
+export const createExplanationBodyQuestionMax = 800;
+
+export const createExplanationBodyRequestIdMin = 8;
+export const createExplanationBodyRequestIdMax = 100;
+
+
+
+export const CreateExplanationBody = zod.object({
+  "screenId": zod.string(),
+  "question": zod.string().min(createExplanationBodyQuestionMin).max(createExplanationBodyQuestionMax),
+  "requestId": zod.string().min(createExplanationBodyRequestIdMin).max(createExplanationBodyRequestIdMax)
+})
+
+export const CreateExplanationResponse = zod.object({
+  "id": zod.string(),
+  "screenId": zod.string(),
+  "question": zod.string(),
+  "answer": zod.string(),
+  "citations": zod.array(zod.object({
+  "label": zod.string(),
+  "url": zod.string(),
+  "period": zod.string(),
+  "retrievedAt": zod.string()
+})),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary My AI questions for a saved screen
+ */
+export const ListExplanationsParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ListExplanationsResponseItem = zod.object({
+  "id": zod.string(),
+  "screenId": zod.string(),
+  "question": zod.string(),
+  "answer": zod.string(),
+  "citations": zod.array(zod.object({
+  "label": zod.string(),
+  "url": zod.string(),
+  "period": zod.string(),
+  "retrievedAt": zod.string()
+})),
+  "createdAt": zod.string()
+})
+export const ListExplanationsResponse = zod.array(ListExplanationsResponseItem)
+
+
+/**
+ * @summary Available subscription tiers
+ */
+export const ListPlansResponse = zod.object({
+  "plans": zod.array(zod.object({
+  "tier": zod.enum(['free', 'pro', 'team', 'enterprise']),
+  "name": zod.string(),
+  "monthlyPrice": zod.number().int(),
+  "screenLimit": zod.number().int(),
+  "aiLimit": zod.number().int(),
+  "checkoutAvailable": zod.boolean()
+})),
+  "note": zod.string()
+})
+
+
+/**
+ * @summary Begin a test-mode or approved live subscription upgrade
+ */
+export const CreateCheckoutBody = zod.object({
+  "tier": zod.enum(['pro', 'team', 'enterprise'])
+})
+
+export const CreateCheckoutResponse = zod.object({
+  "url": zod.string()
+})
+
+
+/**
+ * @summary Manage current subscription
+ */
+export const CreatePortalResponse = zod.object({
+  "url": zod.string()
 })
 
 

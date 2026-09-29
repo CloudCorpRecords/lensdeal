@@ -6,12 +6,27 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './accountStatus';
+export * from './accountStatusTier';
+export * from './billingLink';
+export * from './checkoutInput';
+export * from './checkoutInputTier';
+export * from './citation';
+export * from './compilation';
+export * from './compilationDetail';
+export * from './compilationInput';
 export * from './domainProfile';
 export * from './domainProfileTopChannel';
 export * from './domainProfileTopCountry';
+export * from './explanation';
+export * from './explanationInput';
 export * from './finding';
 export * from './findingSeverity';
 export * from './healthStatus';
+export * from './plan';
+export * from './planCatalog';
+export * from './planTier';
+export * from './savedScreen';
 export * from './screenInput';
 export * from './screenReport';
 export * from './shareItem';

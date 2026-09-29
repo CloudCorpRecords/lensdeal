@@ -1,153 +1,19 @@
-import { useState } from 'react';
-import { ArrowRight, AlertCircle, ArrowUpRight, FileSearch2, LockKeyhole, Printer, ScanSearch, ShieldCheck } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
-import { useScreen } from '@/hooks/use-screen';
-import { ScreenReport } from '@/components/screen-report';
-import type { ScreenInput } from '@workspace/api-client-react';
-
-function normalizeDomain(value: string) {
-  const trimmed = value.trim().toLowerCase();
-  try {
-    return new URL(trimmed.includes('://') ? trimmed : `https://${trimmed}`).hostname.replace(/^www\./, '').replace(/\.$/, '');
-  } catch {
-    return trimmed;
-  }
-}
-
-function isDomain(value: string) {
-  const normalized = normalizeDomain(value);
-  return normalized.length >= 4 && normalized.length <= 253 && /^(?=.{4,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(normalized);
-}
-
-const screenSchema = z.object({
-  targetDomain: z.string().trim().min(1, 'Enter the target domain.').refine(isDomain, 'Enter a valid domain, such as example.com.'),
-  comparisonDomain: z.string().trim().min(1, 'Enter a comparison domain.').refine(isDomain, 'Enter a valid domain, such as peer.com.'),
-}).refine(data => normalizeDomain(data.targetDomain) !== normalizeDomain(data.comparisonDomain), {
-  message: 'Choose a different domain for comparison.',
-  path: ['comparisonDomain'],
-});
-
-type ScreenFormValues = z.infer<typeof screenSchema>;
+import { ArrowDownRight, ArrowRight, ArrowUpRight, ScanSearch } from 'lucide-react';
+import { Link } from 'wouter';
+import { useListPlans } from '@workspace/api-client-react';
 
 export default function Home() {
-  const { report, runScreen, isPending, isError, error, resetError } = useScreen();
-  const [lastInput, setLastInput] = useState<ScreenInput | null>(null);
-  const form = useForm<ScreenFormValues>({
-    resolver: zodResolver(screenSchema),
-    defaultValues: { targetDomain: '', comparisonDomain: '' },
-    mode: 'onSubmit',
-  });
-
-  async function submit(values: ScreenFormValues) {
-    const input = { targetDomain: normalizeDomain(values.targetDomain), comparisonDomain: normalizeDomain(values.comparisonDomain) };
-    setLastInput(input);
-    resetError();
-    try {
-      await runScreen(input);
-      window.setTimeout(() => document.getElementById('report')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-    } catch {
-      // The generated mutation exposes the failure in the inline error state.
-    }
-  }
-
-  async function retry() {
-    if (!lastInput) return;
-    resetError();
-    try {
-      await runScreen(lastInput);
-    } catch {
-      // Keep the error visible so the user can revise the domains or try again.
-    }
-  }
-
-  return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <a href="#top" className="brand" aria-label="DealLens home" data-testid="link-home">
-          <span className="brand-mark"><ScanSearch size={19} strokeWidth={1.8} /></span>
-          <span className="brand-name">deal<span>lens</span><span style={{ color: '#e9e6da' }}>.</span></span>
-        </a>
-        <div className="sidebar-label eyebrow">Workspace</div>
-        <a href="#screen-form" className="nav-item" data-testid="link-traffic-screen"><FileSearch2 size={17} /> Traffic screen</a>
-        <div className="sidebar-spacer" />
-        <div className="sidebar-note">
-          <strong><span className="note-dot" />First-pass intelligence</strong>
-          Directional signals for better diligence conversations. Not a fraud determination or investment recommendation.
-        </div>
-      </aside>
-      <main className="main" id="top">
-        <header className="topbar">
-          <div className="breadcrumb"><span>Workspace</span><span>/</span><strong>Traffic screen</strong></div>
-          <div className="topbar-right"><i /> Acquisition diligence</div>
-        </header>
-        <div className="content">
-          <div className="intro">
-            <div>
-              <span className="eyebrow" style={{ color: '#c66241' }}>The diligence desk / 01</span>
-              <h1>See the traffic.<br /><em>Ask better questions.</em></h1>
-              <p>Compare a target with a peer, surface what deserves a closer look, and walk into the seller conversation prepared.</p>
-            </div>
-            {report && <button type="button" className="print-button" onClick={() => window.print()} data-testid="button-print-report"><Printer size={15} /> Print / save PDF <ArrowUpRight size={13} /></button>}
-          </div>
-
-          <section className="input-panel" id="screen-form" aria-label="New traffic screen">
-            <div className="input-heading"><h2><ScanSearch size={20} /> Set up a screen</h2><span>Two domains. One focused starting point.</span></div>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(submit)} noValidate>
-                <div className="input-grid">
-                  <FormField control={form.control} name="targetDomain" render={({ field }) => (
-                    <FormItem className="field">
-                      <label htmlFor="target-domain">01 / Target domain</label>
-                      <FormControl><input {...field} id="target-domain" className="domain-input" placeholder="targetcompany.com" autoComplete="url" spellCheck={false} aria-label="Target domain" data-testid="input-target-domain" /></FormControl>
-                      <FormMessage className="form-error" />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="comparisonDomain" render={({ field }) => (
-                    <FormItem className="field">
-                      <label htmlFor="comparison-domain">02 / Comparison domain</label>
-                      <FormControl><input {...field} id="comparison-domain" className="domain-input" placeholder="comparablecompany.com" autoComplete="url" spellCheck={false} aria-label="Comparison domain" data-testid="input-comparison-domain" /></FormControl>
-                      <FormMessage className="form-error" />
-                    </FormItem>
-                  )} />
-                  <button type="submit" className="run-button" disabled={isPending} data-testid="button-run-screen">{isPending ? 'Screening…' : 'Run screen'} <ArrowRight size={17} /></button>
-                </div>
-              </form>
-            </Form>
-            <div className="form-meta"><LockKeyhole size={13} /> A live screen uses provider credits. Results are estimates, not first-party analytics.</div>
-          </section>
-
-          <div id="report" aria-live="polite">
-            {isPending ? (
-              <>
-                <div className="divider-heading"><span /><p className="eyebrow">Building your brief</p><span /></div>
-                <div className="loading-state" data-testid="status-loading"><h3>Gathering the signals.</h3><p>Pulling recent traffic estimates and assembling an evidence-constrained readout. This may take a moment.</p><div className="skeleton small" /><div className="skeleton large" /><div className="skeleton medium" /><div className="skeleton" style={{ width: '79%' }} /><div className="skeleton" style={{ width: '56%' }} /></div>
-              </>
-            ) : isError ? (
-              <>
-                <div className="divider-heading"><span /><p className="eyebrow">Screen unavailable</p><span /></div>
-                <div className="error-state" role="alert" data-testid="status-error"><AlertCircle size={22} /><div><h3>We couldn't complete this screen.</h3><p>{error instanceof Error && error.message ? error.message : 'The data sources may be temporarily unavailable. Check the domains and try again.'}</p><button type="button" className="retry" onClick={retry} data-testid="button-retry-screen">Try again</button></div></div>
-              </>
-            ) : report ? <ScreenReport report={report} /> : (
-              <>
-                <div className="divider-heading"><span /><p className="eyebrow">Your report will appear here</p><span /></div>
-                <div className="empty-state" data-testid="status-empty">
-                  <div className="empty-copy">
-                    <span className="eyebrow" style={{ color: '#d26848' }}>Ready when you are</span>
-                    <h2>A clearer picture starts with a comparison.</h2>
-                    <p>Enter the business you're evaluating and a relevant peer. We'll turn recent traffic estimates into focused diligence prompts.</p>
-                  </div>
-                  <div className="empty-art" aria-hidden="true"><div className="art-card"><div className="art-line"><svg viewBox="0 0 190 62" preserveAspectRatio="none"><polyline points="0,47 24,39 47,45 73,19 95,27 121,13 146,28 170,11 190,16" fill="none" stroke="#d96d4b" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg></div><div className="art-stamp"><ScanSearch size={31} strokeWidth={1.6} /></div></div></div>
-                </div>
-              </>
-            )}
-          </div>
-
-          <footer className="footer"><span>DealLens / first-pass traffic intelligence</span><span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><ShieldCheck size={13} /> Verify every signal with seller data</span></footer>
-        </div>
-      </main>
-    </div>
-  );
+  const plans = useListPlans({request:{credentials:'include'}});
+  return <div className="dl-public">
+    <div className="dl-container"><header className="dl-nav"><Link href="/" className="dl-logo" data-testid="link-home"><span className="dl-logo-mark"><ScanSearch size={17}/></span>deal<span style={{fontFamily:'var(--app-font-serif)',fontWeight:400}}>lens</span><span style={{color:'#759b35'}}>.</span></Link><nav className="dl-nav-links"><a href="#approach" data-testid="link-approach">The approach</a><a href="#pricing" data-testid="link-pricing">Pricing</a><Link href="/sign-in" data-testid="link-sign-in">Sign in</Link><Link href="/sign-up" className="dl-link-button" data-testid="link-sign-up">Start researching ↗</Link></nav></header></div>
+    <main>
+      <section className="dl-hero"><div className="dl-orbit" aria-hidden="true"/><div className="dl-container dl-hero-inner"><span className="dl-kicker">A research desk for business buyers</span><h1>Know what<br/>to <em>ask next.</em></h1><div className="dl-hero-bottom"><p>Traffic estimates are only the beginning. Turn outside signals into sharper questions for the people who know the business best.</p><Link href="/sign-up" className="dl-cta" data-testid="link-start-screening">Open your desk <ArrowUpRight size={20}/></Link></div></div></section>
+      <div className="dl-container dl-ticker"><span>01 / Compare</span><span>02 / Understand</span><span>03 / Ask</span><span>04 / Verify</span></div>
+      <section id="approach" className="dl-section dl-container"><div className="dl-section-head"><span className="dl-eyebrow">The job of a first pass</span><div><h2>Better context.<br/><span className="dl-serif">Better conversations.</span></h2><p>Buying a business means working through incomplete information. DealLens makes a practical starting point from directional traffic data, without dressing estimates up as certainty.</p></div></div><div className="dl-steps"><div className="dl-step"><span className="dl-eyebrow">01 / Input</span><strong>Start with the right comparison.</strong><p>Screen a target alongside a relevant peer. Keep the analysis grounded in the market you're actually considering.</p></div><div className="dl-step"><span className="dl-eyebrow">02 / Read</span><strong>See what stands out.</strong><p>Review traffic patterns, acquisition channels and geographies alongside the source period and the limits of external estimates.</p></div><div className="dl-step"><span className="dl-eyebrow">03 / Act</span><strong>Take questions to the seller.</strong><p>Bring a focused checklist to the next conversation. Ask for first-party analytics and an explanation of the business behind the numbers.</p></div></div></section>
+      <section className="dl-dark-section"><div className="dl-container"><span className="dl-kicker">Evidence has edges</span><h2>Not a verdict.<br/><span>A way into the conversation.</span></h2><div className="dl-evidence"><article><span className="dl-eyebrow">What you get</span><p>A comparative brief, source-linked findings, seller questions and a place to keep your research together.</p><ArrowDownRight size={27}/></article><article><span className="dl-eyebrow">What you don't</span><p>A fraud score, an investment recommendation or a substitute for access to the seller's actual analytics.</p><ArrowDownRight size={27}/></article></div></div></section>
+      <section className="dl-quote dl-container"><span className="dl-eyebrow">A useful distinction</span><div><blockquote>“The question isn't whether an estimate is perfect. It's whether it helps you ask for the right proof.”</blockquote><small>DEALLENS / THE BUYER'S RESEARCH DESK</small></div></section>
+      <section id="pricing" className="dl-pricing"><div className="dl-container"><span className="dl-eyebrow">Access / plans</span><div className="dl-section-head" style={{margin:'24px 0 0'}}><span/><div><h2>Room to do<br/><span className="dl-serif">the homework.</span></h2><p>Choose the research capacity that fits your deal flow. Actual allowances and checkout availability are shown below.</p></div></div>{plans.isLoading ? <div className="desk-skeleton" aria-label="Loading plans"/> : plans.isError ? <div className="desk-alert">Plan details are unavailable right now. <button onClick={() => plans.refetch()} data-testid="button-retry-plans">Try again</button></div> : <><div className="dl-pricing-grid">{plans.data?.plans.map(plan => <article className="dl-price" key={plan.tier}><span className="dl-eyebrow">{plan.tier}</span><h3>{plan.name}</h3><div><strong>{plan.tier === 'free' ? 'Free' : plan.monthlyPrice > 0 ? `$${plan.monthlyPrice}` : 'Price pending'}</strong>{plan.monthlyPrice > 0 && <span>/ month</span>}</div><p>{plan.screenLimit} screens and {plan.aiLimit} AI questions per billing period.</p><Link href="/sign-up" data-testid={`link-plan-${plan.tier}`}>{plan.tier !== 'free' && plan.monthlyPrice === 0 ? 'Contact us / availability' : plan.checkoutAvailable ? 'Get started' : 'View availability'} <ArrowUpRight size={17}/></Link></article>)}</div><p className="desk-note">{plans.data?.note}</p></>}</div></section>
+      <section className="dl-dark-section"><div className="dl-container"><span className="dl-kicker">Ready to start?</span><h2>Make the next<br/><span>conversation count.</span></h2><Link href="/sign-up" className="dl-cta" data-testid="link-final-cta">Create your desk <ArrowRight size={18}/></Link></div></section>
+    </main><footer className="dl-footer"><div className="dl-container"><div className="dl-footer-row"><Link href="/" className="dl-logo"><span className="dl-logo-mark"><ScanSearch size={17}/></span>deallens.</Link><nav><a href="#approach">Approach</a><a href="#pricing">Pricing</a><Link href="/sign-in">Sign in</Link></nav></div><small>© {new Date().getFullYear()} DealLens. Estimates are directional. Verify with seller-provided data.</small></div></footer>
+  </div>;
 }
