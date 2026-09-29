@@ -1,0 +1,28 @@
+kind = "slides"
+previewPath = "/deallens-investor-overview/"
+title = "DealLens — Investor Overview"
+description = "A six-slide, VC-focused overview of DealLens: buyer problem, product workflow, research desk, capacity-based pricing, and launch readiness."
+version = "1.0.0"
+id = "artifacts/deallens-investor-overview"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/deallens-investor-overview/" ]
+localPort = 25795
+
+[services.development]
+run = "pnpm --filter @workspace/deallens-investor-overview run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/deallens-investor-overview", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/deallens-investor-overview/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25795"
+BASE_PATH = "/deallens-investor-overview/"

@@ -1,0 +1,885 @@
+format: replit.sdm
+version: 1
+size:
+  width: 1920
+  height: 1080
+background:
+  kind: solid
+  color:
+    kind: rgb
+    value: "#FFFFFF"
+elements:
+  - id: shape1
+    type: shape
+    frame:
+      x: 0
+      y: 0
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape2
+    type: shape
+    frame:
+      x: 0
+      y: 54
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape3
+    type: shape
+    frame:
+      x: 0
+      y: 108
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape4
+    type: shape
+    frame:
+      x: 0
+      y: 162
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape5
+    type: shape
+    frame:
+      x: 0
+      y: 216
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape6
+    type: shape
+    frame:
+      x: 0
+      y: 270
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape7
+    type: shape
+    frame:
+      x: 0
+      y: 324
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape8
+    type: shape
+    frame:
+      x: 0
+      y: 378
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape9
+    type: shape
+    frame:
+      x: 0
+      y: 432
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape10
+    type: shape
+    frame:
+      x: 0
+      y: 486
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape11
+    type: shape
+    frame:
+      x: 0
+      y: 540
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape12
+    type: shape
+    frame:
+      x: 0
+      y: 594
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape13
+    type: shape
+    frame:
+      x: 0
+      y: 648
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape14
+    type: shape
+    frame:
+      x: 0
+      y: 702
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape15
+    type: shape
+    frame:
+      x: 0
+      y: 756
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape16
+    type: shape
+    frame:
+      x: 0
+      y: 810
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape17
+    type: shape
+    frame:
+      x: 0
+      y: 864
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape18
+    type: shape
+    frame:
+      x: 0
+      y: 918
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape19
+    type: shape
+    frame:
+      x: 0
+      y: 972
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape20
+    type: shape
+    frame:
+      x: 0
+      y: 1026
+      width: 1920
+      height: 1
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape21
+    type: shape
+    frame:
+      x: 0
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape22
+    type: shape
+    frame:
+      x: 96
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape23
+    type: shape
+    frame:
+      x: 192
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape24
+    type: shape
+    frame:
+      x: 288
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape25
+    type: shape
+    frame:
+      x: 384
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape26
+    type: shape
+    frame:
+      x: 480
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape27
+    type: shape
+    frame:
+      x: 576
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape28
+    type: shape
+    frame:
+      x: 672
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape29
+    type: shape
+    frame:
+      x: 768
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape30
+    type: shape
+    frame:
+      x: 864
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape31
+    type: shape
+    frame:
+      x: 960
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape32
+    type: shape
+    frame:
+      x: 1056
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape33
+    type: shape
+    frame:
+      x: 1152
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape34
+    type: shape
+    frame:
+      x: 1248
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape35
+    type: shape
+    frame:
+      x: 1344
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape36
+    type: shape
+    frame:
+      x: 1440
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape37
+    type: shape
+    frame:
+      x: 1536
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape38
+    type: shape
+    frame:
+      x: 1632
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape39
+    type: shape
+    frame:
+      x: 1728
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: shape40
+    type: shape
+    frame:
+      x: 1824
+      y: 0
+      width: 1
+      height: 1080
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#F0F0F0"
+  - id: text1
+    type: text
+    name: "02"
+    frame:
+      x: 96
+      y: 1000.08
+      width: 24.21
+      height: 25.92
+    body:
+      paragraphs:
+        - runs:
+            - text: "05"
+              font:
+                kind: family
+                family: Inter
+              sizePt: 8.64
+              weight: 600
+              color:
+                kind: rgb
+                value: "#999999"
+          lineHeight: 1.5
+      overflow: visible
+  - id: shape41
+    type: shape
+    frame:
+      x: 96
+      y: 54
+      width: 57.59
+      height: 57.59
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#3D5A80"
+  - id: text2
+    type: text
+    name: DealLens
+    frame:
+      x: 1550.79
+      y: 54
+      width: 273.22
+      height: 25.92
+    body:
+      paragraphs:
+        - runs:
+            - text: DealLens
+              font:
+                kind: family
+                family: Inter
+              sizePt: 8.64
+              weight: 600
+              color:
+                kind: rgb
+                value: "#3D5A80"
+              letterSpacingPt: 0.864
+          align: right
+          lineHeight: 1.5
+      overflow: visible
+  - id: text4
+    type: text
+    name: "Capacity-based subscriptions"
+    frame:
+      x: 192
+      y: 216
+      width: 1536.05
+      height: 86.47
+    body:
+      paragraphs:
+        - runs:
+            - text: "Capacity-based subscriptions"
+              font:
+                kind: family
+                family: Inter
+              sizePt: 38.4
+              weight: 700
+              color:
+                kind: rgb
+                value: "#111111"
+              letterSpacingPt: -0.768
+          lineHeight: 1.1
+      overflow: visible
+  - id: shape42
+    type: shape
+    frame:
+      x: 192
+      y: 354.47
+      width: 448
+      height: 371.73
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#FFFFFF"
+    stroke:
+      color:
+        kind: rgb
+        value: "#E0E0E0"
+      widthPt: 0.5
+  - id: shape43
+    type: shape
+    frame:
+      x: 250.59
+      y: 413.06
+      width: 38.39
+      height: 38.39
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#3D5A80"
+  - id: text5
+    type: text
+    name: "Free: 10 screens + 10 AI questions per period"
+    frame:
+      x: 250.59
+      y: 458
+      width: 390
+      height: 260
+    body:
+      paragraphs:
+        - runs:
+            - text: "Free: 10 screens + 10 AI questions per period"
+              font:
+                kind: family
+                family: Inter
+              sizePt: 19
+              weight: 600
+              color:
+                kind: rgb
+                value: "#111111"
+          lineHeight: 1.2
+      overflow: visible
+  - id: shape44
+    type: shape
+    frame:
+      x: 736
+      y: 354.47
+      width: 448
+      height: 371.73
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#FFFFFF"
+    stroke:
+      color:
+        kind: rgb
+        value: "#E0E0E0"
+      widthPt: 0.5
+  - id: shape45
+    type: shape
+    frame:
+      x: 794.59
+      y: 413.06
+      width: 38.39
+      height: 38.39
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#98C1D9"
+  - id: text7
+    type: text
+    name: "Pro: $149/month · 50 screens + 100 AI questions"
+    frame:
+      x: 794.59
+      y: 458
+      width: 390
+      height: 260
+    body:
+      paragraphs:
+        - runs:
+            - text: "Pro: $149/month · 50 screens + 100 AI questions"
+              font:
+                kind: family
+                family: Inter
+              sizePt: 19
+              weight: 600
+              color:
+                kind: rgb
+                value: "#111111"
+          lineHeight: 1.2
+      overflow: visible
+  - id: shape46
+    type: shape
+    frame:
+      x: 1280
+      y: 354.47
+      width: 448
+      height: 371.73
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#FFFFFF"
+    stroke:
+      color:
+        kind: rgb
+        value: "#E0E0E0"
+      widthPt: 0.5
+  - id: shape47
+    type: shape
+    frame:
+      x: 1338.59
+      y: 413.06
+      width: 38.39
+      height: 38.39
+    geometry:
+      kind: preset
+      preset: rect
+    fill:
+      kind: solid
+      color:
+        kind: rgb
+        value: "#EE6C4D"
+  - id: text9
+    type: text
+    name: "Team: $599/month · 250 screens + 500 AI questions"
+    frame:
+      x: 1338.59
+      y: 458
+      width: 390
+      height: 260
+    body:
+      paragraphs:
+        - runs:
+            - text: "Team: $599/month · 250 screens + 500 AI questions"
+              font:
+                kind: family
+                family: Inter
+              sizePt: 19
+              weight: 600
+              color:
+                kind: rgb
+                value: "#111111"
+          lineHeight: 1.2
+      overflow: visible
+  - id: footerPanel
+    type: shape
+    frame: { x: 192, y: 778, width: 1536, height: 165 }
+    geometry: { kind: preset, preset: rect }
+    fill: { kind: solid, color: { kind: rgb, value: "#F9F9F9" } }
+    stroke: { color: { kind: rgb, value: "#E0E0E0" }, widthPt: 0.5 }
+  - id: footerCopy
+    type: text
+    frame: { x: 250, y: 822, width: 1420, height: 105 }
+    body:
+      paragraphs:
+        - runs:
+            - text: "Enterprise: $2,500/month · 1,000 screens + 2,000 AI questions"
+          defaultRunStyle:
+            font: { kind: family, family: Inter }
+            sizePt: 20
+            weight: 600
+            color: { kind: rgb, value: "#111111" }
+          lineHeight: 1.25

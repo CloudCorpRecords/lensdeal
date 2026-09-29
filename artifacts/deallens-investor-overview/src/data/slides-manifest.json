@@ -1,0 +1,56 @@
+[
+  {
+    "id": "slide1",
+    "position": 1,
+    "kind": "sdm",
+    "filepath": "src/data/slides/slide1.sdm.yaml",
+    "title": "DealLens",
+    "description": "DealLens cover: Know what to ask next.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "slide2",
+    "position": 2,
+    "kind": "sdm",
+    "filepath": "src/data/slides/slide2.sdm.yaml",
+    "title": "The buyer’s first-pass problem",
+    "description": "The buyer’s first-pass problem — DealLens investor overview.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "slide3",
+    "position": 3,
+    "kind": "sdm",
+    "filepath": "src/data/slides/slide3.sdm.yaml",
+    "title": "From signal to seller question",
+    "description": "From signal to seller question — DealLens investor overview.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "slide4",
+    "position": 4,
+    "kind": "sdm",
+    "filepath": "src/data/slides/slide4.sdm.yaml",
+    "title": "A research desk, not another score",
+    "description": "A research desk, not another score — DealLens investor overview.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "slide5",
+    "position": 5,
+    "kind": "sdm",
+    "filepath": "src/data/slides/slide5.sdm.yaml",
+    "title": "Capacity-based subscriptions",
+    "description": "Capacity-based subscriptions — DealLens investor overview.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "slide6",
+    "position": 6,
+    "kind": "sdm",
+    "filepath": "src/data/slides/slide6.sdm.yaml",
+    "title": "Built now. Launch gates remain.",
+    "description": "Built now. Launch gates remain. — DealLens investor overview.",
+    "speakerNotes": ""
+  }
+]
