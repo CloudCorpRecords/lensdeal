@@ -26,6 +26,8 @@ import type {
   Compilation,
   CompilationDetail,
   CompilationInput,
+  CopilotAnswer,
+  CopilotInput,
   DiscoverStartupsParams,
   DiscoveryPage,
   Explanation,
@@ -934,6 +936,172 @@ export const useDeleteCompilation = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteCompilationMutationOptions(options));
+    }
+
+export const getListCopilotAnswersUrl = (id: string,) => {
+
+
+
+
+  return `/api/compilations/${id}/copilot`
+}
+
+/**
+ * @summary List my saved answers for a research compilation
+ */
+export const listCopilotAnswers = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<CopilotAnswer[]> => {
+
+  return customFetch<CopilotAnswer[]>(getListCopilotAnswersUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCopilotAnswersQueryKey = (id: string,) => {
+    return [
+    `/api/compilations/${id}/copilot`
+    ] as const;
+    }
+
+
+export const getListCopilotAnswersQueryOptions = <TData = Awaited<ReturnType<typeof listCopilotAnswers>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCopilotAnswers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCopilotAnswersQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCopilotAnswers>>> = ({ signal }) => listCopilotAnswers(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCopilotAnswers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCopilotAnswersQueryResult = NonNullable<Awaited<ReturnType<typeof listCopilotAnswers>>>
+export type ListCopilotAnswersQueryError = ErrorType<void>
+
+
+/**
+ * @summary List my saved answers for a research compilation
+ */
+
+export function useListCopilotAnswers<TData = Awaited<ReturnType<typeof listCopilotAnswers>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCopilotAnswers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCopilotAnswersQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAskCopilotUrl = (id: string,) => {
+
+
+
+
+  return `/api/compilations/${id}/copilot`
+}
+
+/**
+ * @summary Ask a bounded, cited research question using one AI question
+ */
+export const askCopilot = async (id: string,
+    copilotInput: CopilotInput, options?: Parameters<typeof customFetch>[1]): Promise<CopilotAnswer> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CopilotAnswer>(getAskCopilotUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(copilotInput)
+  }
+);}
+
+
+
+
+
+export const getAskCopilotMutationKey = () => ['askCopilot'] as const;
+
+export const getAskCopilotMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof askCopilot>>, TError,AskCopilotMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof askCopilot>>, TError,AskCopilotMutationVariables, TContext> => {
+
+const mutationKey = getAskCopilotMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof askCopilot>>, AskCopilotMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  askCopilot(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AskCopilotMutationResult = NonNullable<Awaited<ReturnType<typeof askCopilot>>>
+    export type AskCopilotMutationBody = BodyType<CopilotInput>
+    export type AskCopilotMutationError = ErrorType<void>
+    export type AskCopilotMutationVariables = {id: string;data: BodyType<CopilotInput>}
+
+    /**
+ * @summary Ask a bounded, cited research question using one AI question
+ */
+export const useAskCopilot = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof askCopilot>>, TError,AskCopilotMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof askCopilot>>,
+        TError,
+        AskCopilotMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAskCopilotMutationOptions(options));
     }
 
 export const getCreateExplanationUrl = () => {

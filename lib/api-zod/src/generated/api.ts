@@ -581,6 +581,70 @@ export const DeleteCompilationResponse = zod.void()
 
 
 /**
+ * @summary List my saved answers for a research compilation
+ */
+export const ListCopilotAnswersParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ListCopilotAnswersResponseItem = zod.object({
+  "id": zod.string(),
+  "compilationId": zod.string(),
+  "question": zod.string(),
+  "answer": zod.string(),
+  "freshLookup": zod.boolean(),
+  "createdAt": zod.string(),
+  "citations": zod.array(zod.object({
+  "reportId": zod.string().nullable(),
+  "domain": zod.string(),
+  "period": zod.string(),
+  "retrievedAt": zod.string(),
+  "sourceUrl": zod.string(),
+  "label": zod.string()
+}))
+})
+export const ListCopilotAnswersResponse = zod.array(ListCopilotAnswersResponseItem)
+
+
+/**
+ * @summary Ask a bounded, cited research question using one AI question
+ */
+export const AskCopilotParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const askCopilotBodyQuestionMin = 5;
+export const askCopilotBodyQuestionMax = 800;
+
+export const askCopilotBodyRequestIdMin = 8;
+export const askCopilotBodyRequestIdMax = 100;
+
+
+
+export const AskCopilotBody = zod.object({
+  "question": zod.string().min(askCopilotBodyQuestionMin).max(askCopilotBodyQuestionMax),
+  "requestId": zod.string().min(askCopilotBodyRequestIdMin).max(askCopilotBodyRequestIdMax)
+})
+
+export const AskCopilotResponse = zod.object({
+  "id": zod.string(),
+  "compilationId": zod.string(),
+  "question": zod.string(),
+  "answer": zod.string(),
+  "freshLookup": zod.boolean(),
+  "createdAt": zod.string(),
+  "citations": zod.array(zod.object({
+  "reportId": zod.string().nullable(),
+  "domain": zod.string(),
+  "period": zod.string(),
+  "retrievedAt": zod.string(),
+  "sourceUrl": zod.string(),
+  "label": zod.string()
+}))
+})
+
+
+/**
  * @summary Ask an evidence-grounded question about a saved screen
  */
 export const createExplanationBodyQuestionMin = 5;

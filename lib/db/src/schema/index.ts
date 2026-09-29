@@ -86,6 +86,25 @@ export const explanations = pgTable(
   ],
 );
 
+export const copilotAnswers = pgTable(
+  "deallens_copilot_answers",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+    compilationId: text("compilation_id").notNull().references(() => compilations.id, { onDelete: "cascade" }),
+    requestId: text("request_id").notNull(),
+    question: text("question").notNull(),
+    answer: text("answer").notNull(),
+    freshLookup: boolean("fresh_lookup").notNull(),
+    citations: jsonb("citations").$type<Array<{ reportId: string | null; domain: string; period: string; retrievedAt: string; sourceUrl: string; label: string }>>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("deallens_copilot_compilation_idx").on(table.accountId, table.compilationId, table.createdAt),
+    uniqueIndex("deallens_copilot_request_idx").on(table.accountId, table.requestId),
+  ],
+);
+
 export const requestIdempotency = pgTable(
   "deallens_request_idempotency",
   {

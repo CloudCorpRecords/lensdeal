@@ -197,6 +197,39 @@ export interface CompilationDetail {
   screens: SavedScreen[];
 }
 
+export interface CopilotInput {
+  /**
+     * @minLength 5
+     * @maxLength 800
+     */
+  question: string;
+  /**
+     * @minLength 8
+     * @maxLength 100
+     */
+  requestId: string;
+}
+
+export interface CopilotCitation {
+  /** @nullable */
+  reportId: string | null;
+  domain: string;
+  period: string;
+  retrievedAt: string;
+  sourceUrl: string;
+  label: string;
+}
+
+export interface CopilotAnswer {
+  id: string;
+  compilationId: string;
+  question: string;
+  answer: string;
+  freshLookup: boolean;
+  createdAt: string;
+  citations: CopilotCitation[];
+}
+
 export interface ExplanationInput {
   screenId: string;
   /**

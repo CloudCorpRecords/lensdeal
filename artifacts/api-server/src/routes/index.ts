@@ -5,6 +5,7 @@ import billingRouter from "./billing";
 import compilationRouter from "./compilations";
 import explanationRouter from "./explanations";
 import discoveryRouter from "./discovery";
+import copilotRouter from "./copilot";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(screenRouter);
 router.use(compilationRouter);
 router.use(explanationRouter);
 router.use(discoveryRouter);
+router.use(copilotRouter);
 
 export default router;

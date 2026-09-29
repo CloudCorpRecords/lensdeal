@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import {
   accounts,
+  copilotAnswers,
   db,
   explanations,
   requestIdempotency,
@@ -157,7 +158,24 @@ async function reconcileSavedResult(
     eq(explanations.accountId, accountId),
     eq(explanations.requestId, requestId),
   )).limit(1);
-  if (!explanation) return null;
+  if (!explanation) {
+    const [copilot] = await tx.select().from(copilotAnswers).where(and(
+      eq(copilotAnswers.accountId, accountId),
+      eq(copilotAnswers.requestId, requestId),
+    )).limit(1);
+    return copilot ? {
+      resourceId: copilot.id,
+      response: {
+        id: copilot.id,
+        compilationId: copilot.compilationId,
+        question: copilot.question,
+        answer: copilot.answer,
+        freshLookup: copilot.freshLookup,
+        citations: copilot.citations,
+        createdAt: copilot.createdAt.toISOString(),
+      },
+    } : null;
+  }
   return {
     resourceId: explanation.id,
     response: {

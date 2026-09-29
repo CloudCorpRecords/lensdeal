@@ -172,38 +172,40 @@ paths:
       summary: Delete a compilation
       responses:
         "204": { description: Deleted }
-  /compilations/{id}/diligence-brief:
+  /compilations/{id}/copilot:
     parameters:
       - in: path
         name: id
         required: true
         schema: { type: string }
     get:
-      operationId: getDiligenceBrief
+      operationId: listCopilotAnswers
       tags: [screener]
-      summary: Read the saved cited diligence brief for my compilation
+      summary: List my saved answers for a research compilation
       responses:
         "200":
-          description: Saved brief, or null if none has been generated
+          description: Saved copilot answers
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DiligenceBriefStatus" }
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CopilotAnswer" }
         "404": { description: Compilation not found }
     post:
-      operationId: createDiligenceBrief
+      operationId: askCopilot
       tags: [screener]
-      summary: Generate a cited diligence brief using one AI question
+      summary: Ask a bounded, cited research question using one AI question
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/DiligenceBriefInput" }
+            schema: { $ref: "#/components/schemas/CopilotInput" }
       responses:
         "200":
-          description: New or previously saved diligence brief
+          description: Cited copilot answer
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DiligenceBrief" }
+              schema: { $ref: "#/components/schemas/CopilotAnswer" }
         "404": { description: Compilation or source reports not found }
         "422": { description: Insufficient source evidence }
         "429": { description: AI allowance exhausted }
@@ -455,55 +457,36 @@ components:
         screens:
           type: array
           items: { $ref: "#/components/schemas/SavedScreen" }
-    DiligenceBriefInput:
+    CopilotInput:
       type: object
       additionalProperties: false
-      required: [requestId]
+      required: [question, requestId]
       properties:
+        question: { type: string, minLength: 5, maxLength: 800 }
         requestId: { type: string, minLength: 8, maxLength: 100 }
-    DiligenceCitation:
+    CopilotCitation:
       type: object
-      required: [reportId, domain, period, retrievedAt, sourceUrl]
+      required: [reportId, domain, period, retrievedAt, sourceUrl, label]
       properties:
-        reportId: { type: string }
+        reportId: { type: ["string", "null"] }
         domain: { type: string }
         period: { type: string }
         retrievedAt: { type: string }
         sourceUrl: { type: string }
-    DiligenceSignal:
+        label: { type: string }
+    CopilotAnswer:
       type: object
-      required: [text, citationNumbers]
-      properties:
-        text: { type: string }
-        citationNumbers:
-          type: array
-          items: { type: integer }
-    DiligenceBrief:
-      type: object
-      required: [id, compilationId, createdAt, signals, counterSignals, questions, periodNote, limitations, citations]
+      required: [id, compilationId, question, answer, freshLookup, citations, createdAt]
       properties:
         id: { type: string }
         compilationId: { type: string }
+        question: { type: string }
+        answer: { type: string }
+        freshLookup: { type: boolean }
         createdAt: { type: string }
-        signals:
-          type: array
-          items: { $ref: "#/components/schemas/DiligenceSignal" }
-        counterSignals:
-          type: array
-          items: { $ref: "#/components/schemas/DiligenceSignal" }
-        questions:
-          type: array
-          items: { $ref: "#/components/schemas/DiligenceSignal" }
-        periodNote: { type: string }
-        limitations: { type: string }
         citations:
           type: array
-          items: { $ref: "#/components/schemas/DiligenceCitation" }
-    DiligenceBriefStatus:
-      type: object
-      required: [brief]
-      properties:
-        brief: { type: ["object", "null"], $ref: "#/components/schemas/DiligenceBrief" }
+          items: { $ref: "#/components/schemas/CopilotCitation" }
     ExplanationInput:
       type: object
       required: [screenId, question, requestId]

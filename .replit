@@ -1,4 +1,4 @@
-modules = ["nodejs-24", "python-base-3.13"]
+modules = ["nodejs-24", "python-base-3.13", "postgresql-16"]
 
 [deployment]
 router = "application"
@@ -32,3 +32,6 @@ STRIPE_APPROVED_LIVE_PRICE_ID_ENTERPRISE = "price_1UL7EzAB3jryouxkxnBQffuJ"
 STRIPE_APPROVED_LIVE_PRICE_ID_PRO = "price_1UL7EyAB3jryouxkemVEziIs"
 STRIPE_APPROVED_LIVE_PRICE_ID_TEAM = "price_1UL7EyAB3jryouxkbkAuG4qN"
 STRIPE_BILLING_MODE = "live"
+
+[nix]
+channel = "stable-25_05"
